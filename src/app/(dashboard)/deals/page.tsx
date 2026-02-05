@@ -169,9 +169,9 @@ export default function DealsPage() {
               const closeDate = deal.targetCloseDate
                 ? new Date(deal.targetCloseDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
                 : "TBD";
-              const progress = deal.taskStats?.progress ?? 0;
-              const tasksDone = deal.taskStats?.completed ?? 0;
-              const tasksTotal = deal.taskStats?.total ?? 0;
+              const progress = (deal as any)._taskStats?.progress ?? 0;
+              const tasksDone = (deal as any)._taskStats?.completed ?? 0;
+              const tasksTotal = (deal as any)._taskStats?.total ?? 0;
               return (
                 <Link
                   key={deal.id}

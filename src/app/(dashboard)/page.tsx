@@ -154,7 +154,7 @@ export default function DashboardPage() {
                 const closeDate = deal.targetCloseDate
                   ? new Date(deal.targetCloseDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
                   : "TBD";
-                const progress = deal.taskStats?.progress ?? 0;
+                const progress = (deal as any)._taskStats?.progress ?? 0;
                 return (
                   <a
                     key={deal.id}
