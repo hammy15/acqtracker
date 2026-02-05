@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Plus, Building2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Plus, Building2, Loader2 } from "lucide-react";
+import { trpc } from "@/lib/trpc";
 
 const US_STATES = [
   "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA",
@@ -11,26 +13,28 @@ const US_STATES = [
   "VA","WA","WV","WI","WY",
 ];
 
-const FACILITY_TYPES = ["SNF", "ALF", "ILF", "Hospice", "In-Home"];
-
-const TEMPLATES = [
-  { id: "1", name: "Standard SNF Acquisition" },
-  { id: "2", name: "Standard ALF Acquisition" },
-  { id: "3", name: "Idaho CHOW Template" },
-  { id: "4", name: "Montana CHOW Template" },
-];
-
-const TEAM_MEMBERS = [
-  { id: "1", name: "Owen Richardson" },
-  { id: "2", name: "Steve Anderson" },
-  { id: "3", name: "Doug Martinez" },
-  { id: "4", name: "Sarah Chen" },
-  { id: "5", name: "Tim Brooks" },
-  { id: "6", name: "James Peterson" },
-];
+const FACILITY_TYPES = [
+  { value: "SNF", label: "SNF" },
+  { value: "ALF", label: "ALF" },
+  { value: "ILF", label: "ILF" },
+  { value: "HOSPICE", label: "Hospice" },
+  { value: "IN_HOME", label: "In-Home" },
+] as const;
 
 export default function NewDealPage() {
+  const router = useRouter();
+
+  const { data: templates, isLoading: templatesLoading } = trpc.templates.list.useQuery({});
+  const { data: users, isLoading: usersLoading } = trpc.users.list.useQuery({});
+
+  const createDeal = trpc.deals.create.useMutation({
+    onSuccess: (newDeal) => {
+      router.push(`/deals/${newDeal.id}`);
+    },
+  });
+
   const [formData, setFormData] = useState({
+    name: "",
     facilityName: "",
     facilityType: "",
     state: "",
@@ -45,6 +49,22 @@ export default function NewDealPage() {
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = () => {
+    createDeal.mutate({
+      name: formData.name || formData.facilityName,
+      facilityName: formData.facilityName,
+      facilityType: formData.facilityType as "SNF" | "ALF" | "ILF" | "HOSPICE" | "IN_HOME",
+      state: formData.state,
+      city: formData.city,
+      bedCount: formData.bedCount ? parseInt(formData.bedCount, 10) : undefined,
+      currentOwner: formData.currentOwner || undefined,
+      targetCloseDate: formData.targetCloseDate || undefined,
+      purchasePrice: formData.purchasePrice ? parseFloat(formData.purchasePrice) : undefined,
+      templateId: formData.template || undefined,
+      dealLeadId: formData.dealLead || undefined,
+    });
   };
 
   return (
@@ -67,6 +87,13 @@ export default function NewDealPage() {
         </div>
       </div>
 
+      {/* Error message */}
+      {createDeal.error && (
+        <div className="rounded-xl border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-300">
+          {createDeal.error.message}
+        </div>
+      )}
+
       {/* Form */}
       <div className="neu-card space-y-6">
         <div className="flex items-center gap-3 pb-4 border-b border-surface-200 dark:border-surface-800">
@@ -77,6 +104,20 @@ export default function NewDealPage() {
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
+          {/* Deal Name */}
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">
+              Deal Name
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Cedar Ridge Acquisition"
+              value={formData.name}
+              onChange={(e) => handleChange("name", e.target.value)}
+              className="neu-input"
+            />
+          </div>
+
           {/* Facility Name */}
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">
@@ -103,7 +144,7 @@ export default function NewDealPage() {
             >
               <option value="">Select type...</option>
               {FACILITY_TYPES.map((t) => (
-                <option key={t} value={t}>{t}</option>
+                <option key={t.value} value={t.value}>{t.label}</option>
               ))}
             </select>
           </div>
@@ -203,9 +244,12 @@ export default function NewDealPage() {
               value={formData.template}
               onChange={(e) => handleChange("template", e.target.value)}
               className="neu-input"
+              disabled={templatesLoading}
             >
-              <option value="">Select template...</option>
-              {TEMPLATES.map((t) => (
+              <option value="">
+                {templatesLoading ? "Loading templates..." : "Select template..."}
+              </option>
+              {(templates ?? []).map((t: any) => (
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
             </select>
@@ -220,9 +264,12 @@ export default function NewDealPage() {
               value={formData.dealLead}
               onChange={(e) => handleChange("dealLead", e.target.value)}
               className="neu-input"
+              disabled={usersLoading}
             >
-              <option value="">Select lead...</option>
-              {TEAM_MEMBERS.map((m) => (
+              <option value="">
+                {usersLoading ? "Loading team members..." : "Select lead..."}
+              </option>
+              {(users?.users ?? []).map((m: any) => (
                 <option key={m.id} value={m.id}>{m.name}</option>
               ))}
             </select>
@@ -237,9 +284,17 @@ export default function NewDealPage() {
           >
             Cancel
           </Link>
-          <button className="neu-button-primary flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Create Deal
+          <button
+            onClick={handleSubmit}
+            disabled={createDeal.isPending || !formData.facilityName || !formData.facilityType || !formData.state || !formData.city}
+            className="neu-button-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {createDeal.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Plus className="w-4 h-4" />
+            )}
+            {createDeal.isPending ? "Creating..." : "Create Deal"}
           </button>
         </div>
       </div>

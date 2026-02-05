@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, LayoutGrid, List, Search, Filter } from "lucide-react";
+import { Plus, LayoutGrid, List, Search } from "lucide-react";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { ProgressBar } from "@/components/shared/ProgressBar";
+import { trpc } from "@/lib/trpc";
 
 const DEAL_STATUSES = [
   "ALL",
@@ -19,24 +20,58 @@ const DEAL_STATUSES = [
   "POST_CLOSE",
 ];
 
-const mockDeals = [
-  { id: "1", name: "Cedar Ridge SNF", facilityName: "Cedar Ridge Skilled Nursing Facility", city: "Boise", state: "ID", type: "SNF", status: "CHOW_FILED", progress: 72, lead: "Owen Richardson", bedCount: 120, closeDate: "Mar 15, 2026", tasksDone: 134, tasksTotal: 187 },
-  { id: "2", name: "Mountain View ALF", facilityName: "Mountain View Assisted Living", city: "Helena", state: "MT", type: "ALF", status: "DUE_DILIGENCE", progress: 45, lead: "James Peterson", bedCount: 60, closeDate: "Apr 1, 2026", tasksDone: 54, tasksTotal: 120 },
-  { id: "3", name: "Riverside Care", facilityName: "Riverside Care Center", city: "Portland", state: "OR", type: "SNF", status: "CLOSING", progress: 88, lead: "Doug Martinez", bedCount: 90, closeDate: "Feb 28, 2026", tasksDone: 165, tasksTotal: 188 },
-  { id: "4", name: "Valley Health SNF", facilityName: "Valley Health Skilled Nursing", city: "Spokane", state: "WA", type: "SNF", status: "LOI", progress: 15, lead: "Sarah Chen", bedCount: 80, closeDate: "May 15, 2026", tasksDone: 28, tasksTotal: 190 },
-  { id: "5", name: "Sunset Gardens ALF", facilityName: "Sunset Gardens Assisted Living", city: "Meridian", state: "ID", type: "ALF", status: "PIPELINE", progress: 0, lead: "Unassigned", bedCount: 45, closeDate: "TBD", tasksDone: 0, tasksTotal: 0 },
-];
+function DealCardSkeleton() {
+  return (
+    <div className="neu-card animate-pulse block">
+      <div className="flex items-start justify-between mb-3">
+        <div className="min-w-0">
+          <div className="h-5 w-40 bg-surface-200 dark:bg-surface-700 rounded mb-2" />
+          <div className="h-4 w-32 bg-surface-200 dark:bg-surface-700 rounded" />
+        </div>
+        <div className="h-5 w-20 bg-surface-200 dark:bg-surface-700 rounded-full" />
+      </div>
+      <div className="space-y-3">
+        <div className="flex justify-between">
+          <div className="h-4 w-28 bg-surface-200 dark:bg-surface-700 rounded" />
+          <div className="h-4 w-24 bg-surface-200 dark:bg-surface-700 rounded" />
+        </div>
+        <div className="h-3 w-full bg-surface-200 dark:bg-surface-700 rounded-full" />
+        <div className="flex justify-between">
+          <div className="h-3 w-20 bg-surface-200 dark:bg-surface-700 rounded" />
+          <div className="h-5 w-10 bg-surface-200 dark:bg-surface-700 rounded-full" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function DealsPage() {
   const [view, setView] = useState<"grid" | "list">("grid");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const pageSize = 12;
 
-  const filtered = mockDeals.filter((d) => {
-    if (statusFilter !== "ALL" && d.status !== statusFilter) return false;
-    if (search && !d.name.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
+  const queryStatus = statusFilter === "ALL" ? undefined : statusFilter;
+  const querySearch = search.trim() || undefined;
+
+  const { data: dealsData, isLoading: dealsLoading } = trpc.deals.list.useQuery({
+    status: queryStatus,
+    search: querySearch,
+    page,
+    pageSize,
   });
+
+  const { data: statsData, isLoading: statsLoading } = trpc.deals.getStats.useQuery();
+
+  const deals = dealsData?.deals ?? [];
+  const total = dealsData?.pagination?.total ?? 0;
+  const totalPages = dealsData?.pagination?.totalPages ?? 1;
+
+  const getStatusCount = (status: string): number => {
+    if (status === "ALL") return statsData?.active ?? total;
+    return statsData?.byStatus?.[status] ?? 0;
+  };
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -47,7 +82,7 @@ export default function DealsPage() {
             Deals
           </h1>
           <p className="text-surface-500 dark:text-surface-400 mt-1">
-            {mockDeals.length} active acquisitions
+            {total} active acquisition{total !== 1 ? "s" : ""}
           </p>
         </div>
         <Link href="/deals/new" className="neu-button-primary flex items-center gap-2">
@@ -64,14 +99,20 @@ export default function DealsPage() {
             type="text"
             placeholder="Search deals..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             className="neu-input pl-10"
           />
         </div>
         <div className="flex gap-2">
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
             className="neu-input w-auto min-w-[160px]"
           >
             {DEAL_STATUSES.map((s) => (
@@ -100,18 +141,21 @@ export default function DealsPage() {
       {/* Status pipeline pills */}
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
         {DEAL_STATUSES.map((s) => {
-          const count = s === "ALL" ? mockDeals.length : mockDeals.filter((d) => d.status === s).length;
+          const count = getStatusCount(s);
           return (
             <button
               key={s}
-              onClick={() => setStatusFilter(s)}
+              onClick={() => {
+                setStatusFilter(s);
+                setPage(1);
+              }}
               className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
                 statusFilter === s
                   ? "bg-primary-500 text-white"
                   : "bg-surface-200 dark:bg-surface-800 text-surface-600 dark:text-surface-300 hover:bg-surface-300 dark:hover:bg-surface-700"
               }`}
             >
-              {s === "ALL" ? "All" : s.replace(/_/g, " ")} ({count})
+              {s === "ALL" ? "All" : s.replace(/_/g, " ")} ({statsLoading ? "-" : count})
             </button>
           );
         })}
@@ -119,40 +163,73 @@ export default function DealsPage() {
 
       {/* Deal Grid */}
       <div className={view === "grid" ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-3" : "space-y-3"}>
-        {filtered.map((deal) => (
-          <Link
-            key={deal.id}
-            href={`/deals/${deal.id}`}
-            className="neu-card group block"
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div className="min-w-0">
-                <h3 className="font-semibold text-surface-900 dark:text-surface-100 group-hover:text-primary-500 transition-colors truncate">
-                  {deal.name}
-                </h3>
-                <p className="text-sm text-surface-500 dark:text-surface-400">
-                  {deal.city}, {deal.state} &middot; {deal.bedCount} beds
-                </p>
-              </div>
-              <StatusBadge status={deal.status} />
-            </div>
+        {dealsLoading
+          ? Array.from({ length: 6 }).map((_, i) => <DealCardSkeleton key={i} />)
+          : deals.map((deal: any) => {
+              const closeDate = deal.targetCloseDate
+                ? new Date(deal.targetCloseDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                : "TBD";
+              const progress = deal.taskStats?.progress ?? 0;
+              const tasksDone = deal.taskStats?.completed ?? 0;
+              const tasksTotal = deal.taskStats?.total ?? 0;
+              return (
+                <Link
+                  key={deal.id}
+                  href={`/deals/${deal.id}`}
+                  className="neu-card group block"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-surface-900 dark:text-surface-100 group-hover:text-primary-500 transition-colors truncate">
+                        {deal.name}
+                      </h3>
+                      <p className="text-sm text-surface-500 dark:text-surface-400">
+                        {deal.city}, {deal.state} &middot; {deal.bedCount} beds
+                      </p>
+                    </div>
+                    <StatusBadge status={deal.status} />
+                  </div>
 
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm text-surface-500 dark:text-surface-400">
-                <span>Lead: {deal.lead}</span>
-                <span>Close: {deal.closeDate}</span>
-              </div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm text-surface-500 dark:text-surface-400">
+                      <span>Lead: {deal.dealLead?.name ?? "Unassigned"}</span>
+                      <span>Close: {closeDate}</span>
+                    </div>
 
-              <ProgressBar value={deal.progress} showLabel />
+                    <ProgressBar value={progress} showLabel />
 
-              <div className="flex justify-between text-xs text-surface-400">
-                <span>{deal.tasksDone}/{deal.tasksTotal} tasks</span>
-                <StatusBadge status={deal.type} />
-              </div>
-            </div>
-          </Link>
-        ))}
+                    <div className="flex justify-between text-xs text-surface-400">
+                      <span>{tasksDone}/{tasksTotal} tasks</span>
+                      <StatusBadge status={deal.facilityType} />
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
       </div>
+
+      {/* Pagination */}
+      {!dealsLoading && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 pt-4">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
+            className="neu-button-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Previous
+          </button>
+          <span className="text-sm text-surface-500 dark:text-surface-400 px-4">
+            Page {page} of {totalPages}
+          </span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+            className="neu-button-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }

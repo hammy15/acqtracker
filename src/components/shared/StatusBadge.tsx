@@ -24,6 +24,11 @@ const statusConfig: Record<
   MEDIUM: { label: "Medium", className: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300" },
   HIGH: { label: "High", className: "bg-accent-100 text-accent-700 dark:bg-accent-950 dark:text-accent-300" },
   CRITICAL: { label: "Critical", className: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300" },
+  SNF: { label: "SNF", className: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300" },
+  ALF: { label: "ALF", className: "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300" },
+  ILF: { label: "ILF", className: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300" },
+  HOSPICE: { label: "Hospice", className: "bg-pink-100 text-pink-700 dark:bg-pink-950 dark:text-pink-300" },
+  IN_HOME: { label: "In-Home", className: "bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300" },
 };
 
 interface StatusBadgeProps {

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useParams } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import {
   Settings,
   Building2,
@@ -10,16 +10,93 @@ import {
   Trash2,
   Archive,
   Save,
+  Loader2,
 } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+
+const DEAL_STATUSES = [
+  { value: "PIPELINE", label: "Pipeline" },
+  { value: "LOI", label: "LOI" },
+  { value: "DUE_DILIGENCE", label: "Due Diligence" },
+  { value: "CHOW_FILED", label: "CHOW Filed" },
+  { value: "CLOSING", label: "Closing" },
+  { value: "TRANSITION_DAY", label: "Transition Day" },
+  { value: "WEEK_1", label: "Week 1" },
+  { value: "WEEK_2", label: "Week 2" },
+  { value: "POST_CLOSE", label: "Post-Close" },
+];
 
 export default function DealSettingsPage() {
   const params = useParams();
-  const [dealName, setDealName] = useState("Cedar Ridge SNF Acquisition");
-  const [facilityName, setFacilityName] = useState("Cedar Ridge Skilled Nursing Facility");
+  const router = useRouter();
+  const dealId = params.dealId as string;
+
+  const { data: deal, isLoading } = trpc.deals.getById.useQuery(
+    { id: dealId },
+    { enabled: !!dealId }
+  );
+
+  const { data: teamData } = trpc.users.getTeamForDeal.useQuery(
+    { dealId },
+    { enabled: !!dealId }
+  );
+
+  const { data: allUsers } = trpc.users.list.useQuery({});
+
+  const utils = trpc.useUtils();
+
+  const updateDeal = trpc.deals.update.useMutation({
+    onSuccess: () => {
+      utils.deals.getById.invalidate({ id: dealId });
+    },
+  });
+
+  const archiveDeal = trpc.deals.archive.useMutation({
+    onSuccess: () => {
+      router.push("/deals");
+    },
+  });
+
+  const deleteDeal = trpc.deals.delete.useMutation({
+    onSuccess: () => {
+      router.push("/deals");
+    },
+  });
+
+  const [dealName, setDealName] = useState("");
+  const [facilityName, setFacilityName] = useState("");
+  const [status, setStatus] = useState("");
+  const [dealLeadId, setDealLeadId] = useState("");
   const [notifyOnTask, setNotifyOnTask] = useState(true);
   const [notifyOnFile, setNotifyOnFile] = useState(true);
   const [notifyOnChat, setNotifyOnChat] = useState(false);
   const [notifyOnBlocked, setNotifyOnBlocked] = useState(true);
+
+  useEffect(() => {
+    if (deal) {
+      setDealName(deal.name);
+      setFacilityName(deal.facilityName);
+      setStatus(deal.status);
+      setDealLeadId(deal.dealLeadId ?? "");
+    }
+  }, [deal]);
+
+  const handleSave = () => {
+    updateDeal.mutate({
+      id: dealId,
+      name: dealName,
+      facilityName,
+      dealLeadId: dealLeadId || undefined,
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
@@ -67,25 +144,33 @@ export default function DealSettingsPage() {
             <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">
               Deal Status
             </label>
-            <select className="neu-input">
-              <option>Pipeline</option>
-              <option>LOI</option>
-              <option>Due Diligence</option>
-              <option selected>CHOW Filed</option>
-              <option>Closing</option>
-              <option>Transition Day</option>
-              <option>Post-Close</option>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="neu-input"
+            >
+              {DEAL_STATUSES.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">
               Deal Lead
             </label>
-            <select className="neu-input">
-              <option selected>Owen Richardson</option>
-              <option>Steve Anderson</option>
-              <option>Doug Martinez</option>
-              <option>Sarah Chen</option>
+            <select
+              value={dealLeadId}
+              onChange={(e) => setDealLeadId(e.target.value)}
+              className="neu-input"
+            >
+              <option value="">Unassigned</option>
+              {allUsers?.users?.map((u: { id: string; name: string }) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -98,27 +183,21 @@ export default function DealSettingsPage() {
           <h2 className="text-lg font-semibold text-surface-900 dark:text-surface-100">Team Access</h2>
         </div>
         <div className="space-y-3">
-          {[
-            { name: "Owen Richardson", role: "Owner", email: "owen@company.com" },
-            { name: "Steve Anderson", role: "Admin", email: "steve@company.com" },
-            { name: "Doug Martinez", role: "Member", email: "doug@company.com" },
-            { name: "Sarah Chen", role: "Member", email: "sarah@company.com" },
-            { name: "Tim Brooks", role: "Member", email: "tim@company.com" },
-            { name: "James Peterson", role: "Member", email: "james@company.com" },
-          ].map((m, i) => (
-            <div key={i} className="flex items-center justify-between py-2">
-              <div>
-                <p className="text-sm font-medium text-surface-900 dark:text-surface-100">{m.name}</p>
-                <p className="text-xs text-surface-400">{m.email}</p>
+          {teamData?.teamMembers && teamData.teamMembers.length > 0 ? (
+            teamData.teamMembers.map((m: any) => (
+              <div key={m.id} className="flex items-center justify-between py-2">
+                <div>
+                  <p className="text-sm font-medium text-surface-900 dark:text-surface-100">{m.name}</p>
+                  <p className="text-xs text-surface-400">{m.email}</p>
+                </div>
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-surface-200 dark:bg-surface-800 text-surface-600 dark:text-surface-300">
+                  {m.role.replace(/_/g, " ")}
+                </span>
               </div>
-              <select className="neu-input w-auto py-1.5 text-xs">
-                <option selected={m.role === "Owner"}>Owner</option>
-                <option selected={m.role === "Admin"}>Admin</option>
-                <option selected={m.role === "Member"}>Member</option>
-                <option>Viewer</option>
-              </select>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p className="text-sm text-surface-400 py-4 text-center">No team members assigned yet</p>
+          )}
         </div>
       </div>
 
@@ -149,18 +228,38 @@ export default function DealSettingsPage() {
       {/* Actions */}
       <div className="flex items-center justify-between">
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors">
+          <button
+            onClick={() => archiveDeal.mutate({ id: dealId })}
+            disabled={archiveDeal.isPending}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
+          >
             <Archive className="w-4 h-4" />
-            Archive Deal
+            {archiveDeal.isPending ? "Archiving..." : "Archive Deal"}
           </button>
-          <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors">
+          <button
+            onClick={() => {
+              if (confirm("Are you sure you want to delete this deal? This action cannot be undone.")) {
+                deleteDeal.mutate({ id: dealId });
+              }
+            }}
+            disabled={deleteDeal.isPending}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+          >
             <Trash2 className="w-4 h-4" />
-            Delete Deal
+            {deleteDeal.isPending ? "Deleting..." : "Delete Deal"}
           </button>
         </div>
-        <button className="neu-button-primary flex items-center gap-2">
-          <Save className="w-4 h-4" />
-          Save Changes
+        <button
+          onClick={handleSave}
+          disabled={updateDeal.isPending}
+          className="neu-button-primary flex items-center gap-2"
+        >
+          {updateDeal.isPending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Save className="w-4 h-4" />
+          )}
+          {updateDeal.isPending ? "Saving..." : "Save Changes"}
         </button>
       </div>
     </div>

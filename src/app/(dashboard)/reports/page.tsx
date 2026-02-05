@@ -7,40 +7,85 @@ import {
   CheckCircle2,
   Building2,
   Users,
-  AlertTriangle,
-  Calendar,
   Download,
   Filter,
 } from "lucide-react";
 import { ProgressBar } from "@/components/shared/ProgressBar";
+import { trpc } from "@/lib/trpc";
+import { PageLoader } from "@/components/shared/LoadingSpinner";
 
-const pipelineStats = [
-  { label: "Pipeline", count: 1, color: "bg-surface-400" },
-  { label: "LOI", count: 1, color: "bg-blue-500" },
-  { label: "Due Diligence", count: 1, color: "bg-amber-500" },
-  { label: "CHOW Filed", count: 1, color: "bg-primary-500" },
-  { label: "Closing", count: 1, color: "bg-emerald-500" },
-];
+const statusColorMap: Record<string, string> = {
+  PIPELINE: "bg-surface-400",
+  LOI: "bg-blue-500",
+  DUE_DILIGENCE: "bg-amber-500",
+  CHOW_FILED: "bg-primary-500",
+  CLOSING: "bg-emerald-500",
+  TRANSITION_DAY: "bg-cyan-500",
+  WEEK_1: "bg-teal-500",
+  WEEK_2: "bg-teal-600",
+  POST_CLOSE: "bg-indigo-500",
+  ARCHIVED: "bg-surface-300",
+};
 
-const teamPerformance = [
-  { name: "Owen Richardson", tasks: 342, deals: 4, avgCompletion: 94 },
-  { name: "Steve Anderson", tasks: 287, deals: 3, avgCompletion: 91 },
-  { name: "Sarah Chen", tasks: 198, deals: 3, avgCompletion: 88 },
-  { name: "Doug Martinez", tasks: 156, deals: 2, avgCompletion: 85 },
-  { name: "Tim Brooks", tasks: 124, deals: 2, avgCompletion: 82 },
-  { name: "James Peterson", tasks: 89, deals: 2, avgCompletion: 79 },
-];
-
-const monthlyMetrics = [
-  { month: "Sep 2025", dealsActive: 3, tasksClosed: 145, avgDaysToClose: 88 },
-  { month: "Oct 2025", dealsActive: 3, tasksClosed: 167, avgDaysToClose: 85 },
-  { month: "Nov 2025", dealsActive: 4, tasksClosed: 198, avgDaysToClose: 82 },
-  { month: "Dec 2025", dealsActive: 4, tasksClosed: 156, avgDaysToClose: 80 },
-  { month: "Jan 2026", dealsActive: 5, tasksClosed: 212, avgDaysToClose: 78 },
-  { month: "Feb 2026", dealsActive: 5, tasksClosed: 89, avgDaysToClose: 76 },
-];
+const statusLabelMap: Record<string, string> = {
+  PIPELINE: "Pipeline",
+  LOI: "LOI",
+  DUE_DILIGENCE: "Due Diligence",
+  CHOW_FILED: "CHOW Filed",
+  CLOSING: "Closing",
+  TRANSITION_DAY: "Transition Day",
+  WEEK_1: "Week 1",
+  WEEK_2: "Week 2",
+  POST_CLOSE: "Post Close",
+  ARCHIVED: "Archived",
+};
 
 export default function ReportsPage() {
+  const { data: pipeline, isLoading: pipelineLoading } =
+    trpc.reports.pipelineOverview.useQuery();
+  const { data: teamData, isLoading: teamLoading } =
+    trpc.reports.teamPerformance.useQuery({});
+
+  const isLoading = pipelineLoading || teamLoading;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 max-w-6xl mx-auto">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-surface-900 dark:text-surface-100 flex items-center gap-3">
+              <BarChart3 className="w-6 h-6 text-primary-500" />
+              Reports &amp; Analytics
+            </h1>
+            <p className="text-surface-500 dark:text-surface-400 mt-1">
+              Organization-wide acquisition metrics
+            </p>
+          </div>
+        </div>
+        <PageLoader />
+      </div>
+    );
+  }
+
+  // Convert Record<string, number> to arrays for rendering
+  const pipelineStats = Object.entries(pipeline?.byStatus ?? {}).map(
+    ([status, count]) => ({
+      label: statusLabelMap[status] ?? status,
+      count,
+      color: statusColorMap[status] ?? "bg-surface-400",
+    })
+  );
+
+  const facilityStats = Object.entries(pipeline?.byFacilityType ?? {}).map(
+    ([type, count]) => ({ type, count })
+  );
+
+  const stateStats = Object.entries(pipeline?.byState ?? {}).map(
+    ([state, count]) => ({ state, count })
+  );
+
+  const teamStats = teamData?.teamStats ?? [];
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       {/* Header */}
@@ -71,8 +116,12 @@ export default function ReportsPage() {
         <div className="neu-card">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-2xl font-bold text-surface-900 dark:text-surface-100">5</p>
-              <p className="text-sm text-surface-500 dark:text-surface-400 mt-1">Active Deals</p>
+              <p className="text-2xl font-bold text-surface-900 dark:text-surface-100">
+                {pipeline?.summary?.totalDeals ?? 0}
+              </p>
+              <p className="text-sm text-surface-500 dark:text-surface-400 mt-1">
+                Total Deals
+              </p>
             </div>
             <Building2 className="w-5 h-5 text-primary-500" />
           </div>
@@ -80,8 +129,12 @@ export default function ReportsPage() {
         <div className="neu-card">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-2xl font-bold text-surface-900 dark:text-surface-100">381</p>
-              <p className="text-sm text-surface-500 dark:text-surface-400 mt-1">Tasks This Month</p>
+              <p className="text-2xl font-bold text-surface-900 dark:text-surface-100">
+                {pipeline?.summary?.activeDeals ?? 0}
+              </p>
+              <p className="text-sm text-surface-500 dark:text-surface-400 mt-1">
+                Active Deals
+              </p>
             </div>
             <CheckCircle2 className="w-5 h-5 text-emerald-500" />
           </div>
@@ -89,8 +142,12 @@ export default function ReportsPage() {
         <div className="neu-card">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-2xl font-bold text-surface-900 dark:text-surface-100">78</p>
-              <p className="text-sm text-surface-500 dark:text-surface-400 mt-1">Avg Days to Close</p>
+              <p className="text-2xl font-bold text-surface-900 dark:text-surface-100">
+                {pipeline?.summary?.avgProgress ?? 0}%
+              </p>
+              <p className="text-sm text-surface-500 dark:text-surface-400 mt-1">
+                Avg Progress
+              </p>
             </div>
             <Clock className="w-5 h-5 text-amber-500" />
           </div>
@@ -98,41 +155,50 @@ export default function ReportsPage() {
         <div className="neu-card">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-2xl font-bold text-surface-900 dark:text-surface-100">7</p>
-              <p className="text-sm text-surface-500 dark:text-surface-400 mt-1">Blocked Items</p>
+              <p className="text-2xl font-bold text-surface-900 dark:text-surface-100">
+                {teamStats.length}
+              </p>
+              <p className="text-sm text-surface-500 dark:text-surface-400 mt-1">
+                Team Members
+              </p>
             </div>
-            <AlertTriangle className="w-5 h-5 text-red-500" />
+            <Users className="w-5 h-5 text-blue-500" />
           </div>
         </div>
       </div>
 
       {/* Pipeline Distribution */}
-      <div className="neu-card">
-        <h2 className="text-sm font-semibold uppercase tracking-widest text-surface-400 dark:text-surface-500 mb-4">
-          Pipeline Distribution
-        </h2>
-        <div className="flex gap-1 h-8 rounded-xl overflow-hidden mb-4">
-          {pipelineStats.map((s) => (
-            <div
-              key={s.label}
-              className={`${s.color} flex-1 flex items-center justify-center`}
-              title={`${s.label}: ${s.count}`}
-            >
-              <span className="text-xs font-bold text-white">{s.count}</span>
-            </div>
-          ))}
+      {pipelineStats.length > 0 && (
+        <div className="neu-card">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-surface-400 dark:text-surface-500 mb-4">
+            Pipeline Distribution
+          </h2>
+          <div className="flex gap-1 h-8 rounded-xl overflow-hidden mb-4">
+            {pipelineStats.map((s) => (
+              <div
+                key={s.label}
+                className={`${s.color} flex items-center justify-center`}
+                style={{
+                  flex: s.count,
+                }}
+                title={`${s.label}: ${s.count}`}
+              >
+                <span className="text-xs font-bold text-white">{s.count}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-4">
+            {pipelineStats.map((s) => (
+              <div key={s.label} className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-sm ${s.color}`} />
+                <span className="text-xs text-surface-500 dark:text-surface-400">
+                  {s.label} ({s.count})
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="flex flex-wrap gap-4">
-          {pipelineStats.map((s) => (
-            <div key={s.label} className="flex items-center gap-2">
-              <div className={`w-3 h-3 rounded-sm ${s.color}`} />
-              <span className="text-xs text-surface-500 dark:text-surface-400">
-                {s.label} ({s.count})
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
 
       {/* Two Column Layout */}
       <div className="grid gap-6 lg:grid-cols-2">
@@ -142,82 +208,98 @@ export default function ReportsPage() {
             <Users className="w-4 h-4" />
             Team Performance
           </h2>
-          <div className="space-y-3">
-            {teamPerformance.map((member) => (
-              <div key={member.name}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-medium text-surface-900 dark:text-surface-100">
-                    {member.name}
-                  </span>
-                  <span className="text-xs text-surface-400">
-                    {member.tasks} tasks &middot; {member.deals} deals
-                  </span>
-                </div>
-                <ProgressBar value={member.avgCompletion} showLabel size="sm" />
+          {teamStats.length > 0 ? (
+            <div className="space-y-3">
+              {teamStats.map((member: any) => {
+                const total = member.assigned || 1;
+                const pct = Math.round((member.completed / total) * 100);
+                return (
+                  <div key={(member.user as any)?.id ?? member.completed}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-surface-900 dark:text-surface-100">
+                        {(member.user as any)?.name ?? "Unknown"}
+                      </span>
+                      <span className="text-xs text-surface-400">
+                        {member.completed}/{member.assigned} tasks
+                      </span>
+                    </div>
+                    <ProgressBar value={pct} showLabel size="sm" />
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-surface-400 py-4">
+              No team data available yet.
+            </p>
+          )}
+        </div>
+
+        {/* Breakdown by Facility Type */}
+        <div className="neu-card">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-surface-400 dark:text-surface-500 mb-4 flex items-center gap-2">
+            <Building2 className="w-4 h-4" />
+            By Facility Type
+          </h2>
+          {facilityStats.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-surface-200 dark:border-surface-800">
+                    <th className="text-left py-2 text-xs font-semibold text-surface-500 dark:text-surface-400">
+                      Type
+                    </th>
+                    <th className="text-right py-2 text-xs font-semibold text-surface-500 dark:text-surface-400">
+                      Deals
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-surface-100 dark:divide-surface-800/50">
+                  {facilityStats.map((ft) => (
+                    <tr key={ft.type}>
+                      <td className="py-2 text-sm text-surface-700 dark:text-surface-300">
+                        {ft.type}
+                      </td>
+                      <td className="py-2 text-sm text-right text-surface-500">
+                        {ft.count}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-surface-400 py-4">
+              No facility data available yet.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* By State */}
+      {stateStats.length > 0 && (
+        <div className="neu-card">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-surface-400 dark:text-surface-500 mb-4 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4" />
+            Deals by State
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {stateStats.map((s) => (
+              <div
+                key={s.state}
+                className="flex items-center justify-between p-3 rounded-xl bg-surface-50 dark:bg-surface-900/30"
+              >
+                <span className="text-sm font-medium text-surface-800 dark:text-surface-100">
+                  {s.state}
+                </span>
+                <span className="text-lg font-bold text-primary-500">
+                  {s.count}
+                </span>
               </div>
             ))}
           </div>
         </div>
-
-        {/* Monthly Trends */}
-        <div className="neu-card">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-surface-400 dark:text-surface-500 mb-4 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4" />
-            Monthly Trends
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-surface-200 dark:border-surface-800">
-                  <th className="text-left py-2 text-xs font-semibold text-surface-500 dark:text-surface-400">Month</th>
-                  <th className="text-right py-2 text-xs font-semibold text-surface-500 dark:text-surface-400">Deals</th>
-                  <th className="text-right py-2 text-xs font-semibold text-surface-500 dark:text-surface-400">Tasks</th>
-                  <th className="text-right py-2 text-xs font-semibold text-surface-500 dark:text-surface-400">Avg Days</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-100 dark:divide-surface-800/50">
-                {monthlyMetrics.map((m) => (
-                  <tr key={m.month}>
-                    <td className="py-2 text-sm text-surface-700 dark:text-surface-300">{m.month}</td>
-                    <td className="py-2 text-sm text-right text-surface-500">{m.dealsActive}</td>
-                    <td className="py-2 text-sm text-right text-surface-500">{m.tasksClosed}</td>
-                    <td className="py-2 text-sm text-right text-surface-500">{m.avgDaysToClose}d</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {/* Upcoming Closings */}
-      <div className="neu-card">
-        <h2 className="text-sm font-semibold uppercase tracking-widest text-surface-400 dark:text-surface-500 mb-4 flex items-center gap-2">
-          <Calendar className="w-4 h-4" />
-          Upcoming Closings
-        </h2>
-        <div className="space-y-3">
-          {[
-            { name: "Riverside Care", date: "Feb 28, 2026", daysOut: 23, progress: 88 },
-            { name: "Cedar Ridge SNF", date: "Mar 15, 2026", daysOut: 38, progress: 72 },
-            { name: "Mountain View ALF", date: "Apr 1, 2026", daysOut: 55, progress: 45 },
-            { name: "Valley Health SNF", date: "May 15, 2026", daysOut: 99, progress: 15 },
-          ].map((deal) => (
-            <div key={deal.name} className="flex items-center gap-4">
-              <span className="text-sm font-medium text-surface-900 dark:text-surface-100 w-40 shrink-0">
-                {deal.name}
-              </span>
-              <span className="text-xs text-surface-400 w-28 shrink-0">{deal.date}</span>
-              <div className="flex-1">
-                <ProgressBar value={deal.progress} showLabel size="sm" />
-              </div>
-              <span className="text-xs font-medium text-primary-500 shrink-0 w-16 text-right">
-                {deal.daysOut}d out
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
     </div>
   );
 }

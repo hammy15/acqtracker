@@ -6,65 +6,69 @@ import {
   Plus,
   Search,
   Shield,
-  Mail,
-  Phone,
-  Building2,
   MoreVertical,
-  CheckCircle2,
-  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/lib/trpc";
+import { PageLoader } from "@/components/shared/LoadingSpinner";
+import { EmptyState } from "@/components/shared/EmptyState";
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  role: string;
-  department: string;
-  activeDeals: number;
-  tasksCompleted: number;
-  status: "active" | "invited" | "inactive";
-  avatar: string;
-}
+const roleBadge: Record<string, { classes: string }> = {
+  ADMIN: {
+    classes:
+      "bg-primary-50 dark:bg-primary-950/30 text-primary-600 dark:text-primary-400",
+  },
+  MEMBER: {
+    classes:
+      "bg-surface-200 dark:bg-surface-800 text-surface-600 dark:text-surface-300",
+  },
+  VIEWER: {
+    classes:
+      "bg-surface-100 dark:bg-surface-800 text-surface-500 dark:text-surface-400",
+  },
+};
 
-const mockUsers: User[] = [
-  { id: "1", name: "Owen Richardson", email: "owen@company.com", phone: "(208) 555-0101", role: "Admin", department: "Executive", activeDeals: 4, tasksCompleted: 342, status: "active", avatar: "OR" },
-  { id: "2", name: "Steve Anderson", email: "steve@company.com", phone: "(208) 555-0102", role: "Admin", department: "Licensing & Compliance", activeDeals: 3, tasksCompleted: 287, status: "active", avatar: "SA" },
-  { id: "3", name: "Doug Martinez", email: "doug@company.com", phone: "(208) 555-0104", role: "Member", department: "Operations", activeDeals: 2, tasksCompleted: 156, status: "active", avatar: "DM" },
-  { id: "4", name: "Sarah Chen", email: "sarah@company.com", phone: "(208) 555-0105", role: "Member", department: "Accounting", activeDeals: 3, tasksCompleted: 198, status: "active", avatar: "SC" },
-  { id: "5", name: "Tim Brooks", email: "tim@company.com", phone: "(208) 555-0103", role: "Member", department: "HR / Operations", activeDeals: 2, tasksCompleted: 124, status: "active", avatar: "TB" },
-  { id: "6", name: "James Peterson", email: "james@company.com", phone: "(208) 555-0106", role: "Member", department: "Facilities", activeDeals: 2, tasksCompleted: 89, status: "active", avatar: "JP" },
-  { id: "7", name: "Lisa Huang", email: "lisa@company.com", phone: "(208) 555-0107", role: "Viewer", department: "Legal", activeDeals: 1, tasksCompleted: 0, status: "invited", avatar: "LH" },
-  { id: "8", name: "Mike Thompson", email: "mike@company.com", phone: "(208) 555-0108", role: "Member", department: "IT", activeDeals: 0, tasksCompleted: 45, status: "inactive", avatar: "MT" },
+const avatarColors = [
+  "bg-primary-500",
+  "bg-emerald-500",
+  "bg-blue-500",
+  "bg-purple-500",
+  "bg-amber-500",
+  "bg-red-500",
+  "bg-pink-500",
+  "bg-cyan-500",
+  "bg-orange-500",
+  "bg-teal-500",
 ];
 
-const avatarColors: Record<string, string> = {
-  OR: "bg-primary-500",
-  SA: "bg-emerald-500",
-  DM: "bg-blue-500",
-  SC: "bg-purple-500",
-  TB: "bg-amber-500",
-  JP: "bg-red-500",
-  LH: "bg-pink-500",
-  MT: "bg-surface-400",
-};
+function getAvatarColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return avatarColors[Math.abs(hash) % avatarColors.length];
+}
 
-const statusBadge: Record<string, { label: string; classes: string }> = {
-  active: { label: "Active", classes: "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400" },
-  invited: { label: "Invited", classes: "bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400" },
-  inactive: { label: "Inactive", classes: "bg-surface-100 dark:bg-surface-800 text-surface-500" },
-};
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
 
 export default function UsersPage() {
   const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
 
-  const filtered = mockUsers.filter(
-    (u) =>
-      !search ||
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase())
-  );
+  const { data, isLoading } = trpc.users.list.useQuery({
+    search,
+    role: roleFilter || undefined,
+  });
+
+  const users = data?.users ?? [];
+  const activeCount = users.filter((u) => u.isActive).length;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -76,7 +80,7 @@ export default function UsersPage() {
             Team Members
           </h1>
           <p className="text-surface-500 dark:text-surface-400 mt-1">
-            {mockUsers.length} users &middot; {mockUsers.filter((u) => u.status === "active").length} active
+            {users.length} users &middot; {activeCount} active
           </p>
         </div>
         <button className="neu-button-primary flex items-center gap-2">
@@ -85,73 +89,151 @@ export default function UsersPage() {
         </button>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
-        <input
-          type="text"
-          placeholder="Search users..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="neu-input pl-10"
-        />
+      {/* Search & Filter */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+          <input
+            type="text"
+            placeholder="Search users..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="neu-input pl-10"
+          />
+        </div>
+        <select
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value)}
+          className="neu-input w-36"
+        >
+          <option value="">All Roles</option>
+          <option value="ADMIN">Admin</option>
+          <option value="MEMBER">Member</option>
+          <option value="VIEWER">Viewer</option>
+        </select>
       </div>
 
+      {/* Loading State */}
+      {isLoading && <PageLoader />}
+
+      {/* Empty State */}
+      {!isLoading && users.length === 0 && (
+        <EmptyState
+          icon={Users}
+          title="No users found"
+          description={
+            search || roleFilter
+              ? "No users match your filters. Try a different search or role."
+              : "Invite your first team member to get started."
+          }
+        />
+      )}
+
       {/* Users Table */}
-      <div className="neu-card p-0 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-surface-200 dark:border-surface-800">
-                <th className="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400">User</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400">Role</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400">Department</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400">Deals</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400">Status</th>
-                <th className="text-right px-6 py-3 text-xs font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-surface-100 dark:divide-surface-800/50">
-              {filtered.map((user) => {
-                const badge = statusBadge[user.status];
-                return (
-                  <tr key={user.id} className="hover:bg-surface-50 dark:hover:bg-surface-900/20 transition-colors">
-                    <td className="px-6 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0", avatarColors[user.avatar] || "bg-surface-500")}>
-                          {user.avatar}
+      {!isLoading && users.length > 0 && (
+        <div className="neu-card p-0 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-surface-200 dark:border-surface-800">
+                  <th className="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400">
+                    User
+                  </th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400">
+                    Role
+                  </th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400">
+                    Region
+                  </th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400">
+                    Tasks
+                  </th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400">
+                    Status
+                  </th>
+                  <th className="text-right px-6 py-3 text-xs font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-surface-100 dark:divide-surface-800/50">
+                {users.map((user) => {
+                  const initials = getInitials(user.name);
+                  const avatarColor = getAvatarColor(user.name);
+                  const badge = roleBadge[user.role] ?? roleBadge.MEMBER;
+
+                  return (
+                    <tr
+                      key={user.id}
+                      className="hover:bg-surface-50 dark:hover:bg-surface-900/20 transition-colors"
+                    >
+                      <td className="px-6 py-3">
+                        <div className="flex items-center gap-3">
+                          {user.avatar ? (
+                            <img
+                              src={user.avatar}
+                              alt={user.name}
+                              className="w-8 h-8 rounded-full object-cover shrink-0"
+                            />
+                          ) : (
+                            <div
+                              className={cn(
+                                "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0",
+                                avatarColor
+                              )}
+                            >
+                              {initials}
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-sm font-medium text-surface-900 dark:text-surface-100">
+                              {user.name}
+                            </p>
+                            <p className="text-xs text-surface-400">
+                              {user.email}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-surface-900 dark:text-surface-100">{user.name}</p>
-                          <p className="text-xs text-surface-400">{user.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="flex items-center gap-1 text-xs text-surface-600 dark:text-surface-300">
-                        <Shield className="w-3 h-3" />
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-surface-500 dark:text-surface-400">{user.department}</td>
-                    <td className="px-4 py-3 text-sm text-surface-500 dark:text-surface-400">{user.activeDeals} active</td>
-                    <td className="px-4 py-3">
-                      <span className={cn("text-xs font-medium px-2.5 py-1 rounded-full", badge.classes)}>
-                        {badge.label}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3 text-right">
-                      <button className="p-1.5 rounded-lg hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors">
-                        <MoreVertical className="w-4 h-4 text-surface-400" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={cn(
+                            "flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full w-fit",
+                            badge.classes
+                          )}
+                        >
+                          <Shield className="w-3 h-3" />
+                          {user.role}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-surface-500 dark:text-surface-400">
+                        {user.region?.name ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-surface-500 dark:text-surface-400">
+                        {user._count.assignedTasks} assigned
+                      </td>
+                      <td className="px-4 py-3">
+                        {user.isActive ? (
+                          <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400">
+                            Active
+                          </span>
+                        ) : (
+                          <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-surface-100 dark:bg-surface-800 text-surface-500">
+                            Inactive
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-3 text-right">
+                        <button className="p-1.5 rounded-lg hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors">
+                          <MoreVertical className="w-4 h-4 text-surface-400" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

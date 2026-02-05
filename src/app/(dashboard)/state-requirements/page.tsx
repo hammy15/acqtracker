@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   MapPin,
   Search,
@@ -9,36 +9,51 @@ import {
   Building2,
   FileText,
   Shield,
-  ExternalLink,
+  Clock,
+  CheckCircle2,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-interface StateReq {
-  state: string;
-  abbr: string;
-  facilityTypes: string[];
-  agency: string;
-  totalRequirements: number;
-  avgProcessingDays: number;
-  lastUpdated: string;
-  notes: string;
-}
-
-const mockStates: StateReq[] = [
-  { state: "Idaho", abbr: "ID", facilityTypes: ["SNF", "ALF"], agency: "Dept of Health & Welfare", totalRequirements: 12, avgProcessingDays: 90, lastUpdated: "Feb 02, 2026", notes: "Surety bond required. Fire marshal inspection mandatory." },
-  { state: "Montana", abbr: "MT", facilityTypes: ["SNF", "ALF"], agency: "DPHHS", totalRequirements: 10, avgProcessingDays: 75, lastUpdated: "Jan 15, 2026", notes: "Requires Certificate of Need for new licenses." },
-  { state: "Oregon", abbr: "OR", facilityTypes: ["SNF", "ALF", "ILF"], agency: "DHS / Oregon Health Authority", totalRequirements: 14, avgProcessingDays: 120, lastUpdated: "Jan 20, 2026", notes: "Moratorium in certain counties. Check before applying." },
-  { state: "Washington", abbr: "WA", facilityTypes: ["SNF", "ALF"], agency: "DSHS / Aging & Long-Term Support", totalRequirements: 11, avgProcessingDays: 60, lastUpdated: "Dec 10, 2025", notes: "Expedited process available for existing operators." },
-  { state: "Utah", abbr: "UT", facilityTypes: ["SNF"], agency: "Dept of Health & Human Services", totalRequirements: 9, avgProcessingDays: 45, lastUpdated: "Nov 30, 2025", notes: "Relatively streamlined process." },
-  { state: "Wyoming", abbr: "WY", facilityTypes: ["SNF", "ALF"], agency: "Dept of Health", totalRequirements: 8, avgProcessingDays: 60, lastUpdated: "Dec 05, 2025", notes: "" },
-];
+import { trpc } from "@/lib/trpc";
+import { PageLoader } from "@/components/shared/LoadingSpinner";
+import { EmptyState } from "@/components/shared/EmptyState";
 
 export default function StateRequirementsPage() {
   const [search, setSearch] = useState("");
+  const [stateFilter, setStateFilter] = useState("");
+  const [facilityTypeFilter, setFacilityTypeFilter] = useState("");
 
-  const filtered = mockStates.filter(
-    (s) => !search || s.state.toLowerCase().includes(search.toLowerCase()) || s.abbr.toLowerCase().includes(search.toLowerCase())
-  );
+  const { data: requirements, isLoading } = trpc.stateReqs.list.useQuery({
+    search,
+    stateCode: stateFilter || undefined,
+    facilityType: facilityTypeFilter || undefined,
+  });
+
+  // Group requirements by state code
+  const groupedByState = useMemo(() => {
+    if (!requirements) return {};
+    return requirements.reduce(
+      (acc, req) => {
+        const key = req.stateCode;
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(req);
+        return acc;
+      },
+      {} as Record<string, typeof requirements>
+    );
+  }, [requirements]);
+
+  // Get unique state codes for filter dropdown
+  const uniqueStates = useMemo(() => {
+    if (!requirements) return [];
+    return [...new Set(requirements.map((r) => r.stateCode))].sort();
+  }, [requirements]);
+
+  // Get unique facility types for filter dropdown
+  const uniqueFacilityTypes = useMemo(() => {
+    if (!requirements) return [];
+    return [...new Set(requirements.map((r) => r.facilityType))].sort();
+  }, [requirements]);
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -59,65 +74,139 @@ export default function StateRequirementsPage() {
         </button>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
-        <input
-          type="text"
-          placeholder="Search states..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="neu-input pl-10"
-        />
+      {/* Search & Filters */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+          <input
+            type="text"
+            placeholder="Search states..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="neu-input pl-10"
+          />
+        </div>
+        <select
+          value={stateFilter}
+          onChange={(e) => setStateFilter(e.target.value)}
+          className="neu-input w-32"
+        >
+          <option value="">All States</option>
+          {uniqueStates.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+        <select
+          value={facilityTypeFilter}
+          onChange={(e) => setFacilityTypeFilter(e.target.value)}
+          className="neu-input w-36"
+        >
+          <option value="">All Types</option>
+          {uniqueFacilityTypes.map((ft) => (
+            <option key={ft} value={ft}>
+              {ft}
+            </option>
+          ))}
+        </select>
       </div>
 
-      {/* State Cards */}
-      <div className="space-y-3">
-        {filtered.map((state) => (
-          <div key={state.abbr} className="neu-card group cursor-pointer hover:border-primary-500/30 transition-colors">
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-primary-500/10 flex items-center justify-center shrink-0">
-                  <span className="text-lg font-bold text-primary-500">{state.abbr}</span>
+      {/* Loading State */}
+      {isLoading && <PageLoader />}
+
+      {/* Empty State */}
+      {!isLoading && requirements?.length === 0 && (
+        <EmptyState
+          icon={MapPin}
+          title="No requirements found"
+          description={
+            search || stateFilter || facilityTypeFilter
+              ? "No requirements match your filters. Try different criteria."
+              : "Add your first state requirement to get started."
+          }
+        />
+      )}
+
+      {/* Grouped State Cards */}
+      {!isLoading && requirements && requirements.length > 0 && (
+        <div className="space-y-6">
+          {Object.entries(groupedByState).map(([stateCode, reqs]) => (
+            <div key={stateCode} className="space-y-3">
+              {/* State Header */}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary-500/10 flex items-center justify-center shrink-0">
+                  <span className="text-sm font-bold text-primary-500">
+                    {stateCode}
+                  </span>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-surface-900 dark:text-surface-100 group-hover:text-primary-500 transition-colors">
-                    {state.state}
-                  </h3>
-                  <p className="text-sm text-surface-500 dark:text-surface-400 flex items-center gap-1">
-                    <Shield className="w-3 h-3" />
-                    {state.agency}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {state.facilityTypes.map((ft) => (
-                      <span
-                        key={ft}
-                        className="text-xs font-medium px-2 py-0.5 rounded-full bg-surface-200 dark:bg-surface-800 text-surface-600 dark:text-surface-300"
-                      >
-                        {ft}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <ChevronRight className="w-5 h-5 text-surface-300 dark:text-surface-600 group-hover:text-primary-500 transition-colors shrink-0" />
-            </div>
-            <div className="flex items-center gap-6 mt-4 pt-3 border-t border-surface-200 dark:border-surface-800 text-xs text-surface-400">
-              <span className="flex items-center gap-1">
-                <FileText className="w-3 h-3" />
-                {state.totalRequirements} requirements
-              </span>
-              <span>~{state.avgProcessingDays} day processing</span>
-              <span>Updated {state.lastUpdated}</span>
-              {state.notes && (
-                <span className="text-surface-500 dark:text-surface-400 italic truncate max-w-xs">
-                  {state.notes}
+                <h2 className="text-lg font-semibold text-surface-900 dark:text-surface-100">
+                  {stateCode}
+                </h2>
+                <span className="text-xs text-surface-400">
+                  {reqs.length} requirement{reqs.length !== 1 ? "s" : ""}
                 </span>
-              )}
+              </div>
+
+              {/* Requirement Cards */}
+              {reqs.map((req) => (
+                <div
+                  key={req.id}
+                  className="neu-card group cursor-pointer hover:border-primary-500/30 transition-colors"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-surface-200 dark:bg-surface-800 text-surface-600 dark:text-surface-300">
+                            {req.facilityType}
+                          </span>
+                        </div>
+                        <p className="text-sm text-surface-500 dark:text-surface-400 flex items-center gap-1">
+                          <Shield className="w-3 h-3" />
+                          {req.licensingBody}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-surface-300 dark:text-surface-600 group-hover:text-primary-500 transition-colors shrink-0" />
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-4 mt-3 pt-3 border-t border-surface-200 dark:border-surface-800 text-xs text-surface-400">
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      ~{req.processingTimelineDays} day processing
+                    </span>
+                    {req.suretyBondRequired && (
+                      <span className="flex items-center gap-1 text-amber-500">
+                        <AlertTriangle className="w-3 h-3" />
+                        Surety Bond Required
+                      </span>
+                    )}
+                    {req.conRequired && (
+                      <span className="flex items-center gap-1 text-amber-500">
+                        <FileText className="w-3 h-3" />
+                        CON Required
+                      </span>
+                    )}
+                    {req.backgroundCheckRequired && (
+                      <span className="flex items-center gap-1 text-blue-500">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Background Check
+                      </span>
+                    )}
+                  </div>
+
+                  {req.notes && (
+                    <p className="mt-2 text-xs text-surface-500 dark:text-surface-400 italic">
+                      {req.notes}
+                    </p>
+                  )}
+                </div>
+              ))}
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

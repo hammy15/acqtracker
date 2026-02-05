@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useParams } from "next/navigation";
 import {
   Zap,
@@ -11,27 +10,10 @@ import {
   Clock,
   CheckCircle2,
   Mail,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-interface TeamMember {
-  id: string;
-  name: string;
-  role: string;
-  phone: string;
-  email: string;
-  area: string;
-  confirmed: boolean;
-}
-
-const mockTeam: TeamMember[] = [
-  { id: "1", name: "Owen Richardson", role: "Team Lead / Admin", phone: "(208) 555-0101", email: "owen@company.com", area: "Front Office / Administration", confirmed: true },
-  { id: "2", name: "Steve Anderson", role: "Licensing & Compliance", phone: "(208) 555-0102", email: "steve@company.com", area: "Business Office", confirmed: true },
-  { id: "3", name: "Tim Brooks", role: "HR / Employee Transition", phone: "(208) 555-0103", email: "tim@company.com", area: "Break Room / HR Office", confirmed: true },
-  { id: "4", name: "Doug Martinez", role: "Operations & Clinical", phone: "(208) 555-0104", email: "doug@company.com", area: "Nursing Station / Clinical", confirmed: false },
-  { id: "5", name: "Sarah Chen", role: "Accounting & Finance", phone: "(208) 555-0105", email: "sarah@company.com", area: "Business Office", confirmed: true },
-  { id: "6", name: "James Peterson", role: "Facilities & Maintenance", phone: "(208) 555-0106", email: "james@company.com", area: "Maintenance / Physical Plant", confirmed: false },
-];
+import { trpc } from "@/lib/trpc";
 
 const arrivalSchedule = [
   { time: "11:00 PM (night before)", tasks: "Team Lead arrives, meets night shift supervisor, walkthrough" },
@@ -46,8 +28,24 @@ const arrivalSchedule = [
 
 export default function TransitionPage() {
   const params = useParams();
+  const dealId = params.dealId as string;
 
-  const confirmed = mockTeam.filter((m) => m.confirmed).length;
+  const { data: assignments, isLoading } = trpc.buildings.listByDeal.useQuery(
+    { dealId },
+    { enabled: !!dealId }
+  );
+
+  const teamMembers = assignments ?? [];
+  const activeMembers = teamMembers.filter((m: { isActive: boolean }) => m.isActive);
+  const leads = activeMembers.filter((m: { onSiteRole: string }) => m.onSiteRole === "BUILDING_LEAD");
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -72,22 +70,26 @@ export default function TransitionPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="neu-card text-center">
           <Users className="w-5 h-5 text-primary-500 mx-auto mb-2" />
-          <p className="text-2xl font-bold text-surface-900 dark:text-surface-100">{mockTeam.length}</p>
+          <p className="text-2xl font-bold text-surface-900 dark:text-surface-100">{activeMembers.length}</p>
           <p className="text-xs text-surface-400">Team Members</p>
         </div>
         <div className="neu-card text-center">
           <CheckCircle2 className="w-5 h-5 text-emerald-500 mx-auto mb-2" />
-          <p className="text-2xl font-bold text-surface-900 dark:text-surface-100">{confirmed}</p>
-          <p className="text-xs text-surface-400">Confirmed</p>
+          <p className="text-2xl font-bold text-surface-900 dark:text-surface-100">{leads.length}</p>
+          <p className="text-xs text-surface-400">Building Leads</p>
         </div>
         <div className="neu-card text-center">
           <Clock className="w-5 h-5 text-amber-500 mx-auto mb-2" />
-          <p className="text-2xl font-bold text-surface-900 dark:text-surface-100">{mockTeam.length - confirmed}</p>
-          <p className="text-xs text-surface-400">Pending</p>
+          <p className="text-2xl font-bold text-surface-900 dark:text-surface-100">
+            {activeMembers.length - leads.length}
+          </p>
+          <p className="text-xs text-surface-400">Team Members</p>
         </div>
         <div className="neu-card text-center">
           <MapPin className="w-5 h-5 text-blue-500 mx-auto mb-2" />
-          <p className="text-2xl font-bold text-surface-900 dark:text-surface-100">6</p>
+          <p className="text-2xl font-bold text-surface-900 dark:text-surface-100">
+            {activeMembers.length > 0 ? Math.min(activeMembers.length, 6) : 0}
+          </p>
           <p className="text-xs text-surface-400">Areas Covered</p>
         </div>
       </div>
@@ -97,41 +99,52 @@ export default function TransitionPage() {
         <h2 className="text-sm font-semibold uppercase tracking-widest text-surface-400 dark:text-surface-500 mb-4">
           Team Assignments
         </h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {mockTeam.map((member) => (
-            <div key={member.id} className="neu-card">
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <h3 className="font-semibold text-surface-900 dark:text-surface-100">
-                    {member.name}
-                  </h3>
-                  <p className="text-sm text-primary-500">{member.role}</p>
+        {activeMembers.length > 0 ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {activeMembers.map((member: { id: string; userId: string; onSiteRole: string; isActive: boolean; user: { name: string; email: string; role: string } }) => (
+              <div key={member.id} className="neu-card">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <h3 className="font-semibold text-surface-900 dark:text-surface-100">
+                      {member.user.name}
+                    </h3>
+                    <p className="text-sm text-primary-500">
+                      {member.onSiteRole === "BUILDING_LEAD" ? "Building Lead" : "Team Member"}
+                    </p>
+                  </div>
+                  <span
+                    className={cn(
+                      "text-xs font-medium px-2.5 py-1 rounded-full",
+                      member.isActive
+                        ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400"
+                        : "bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400"
+                    )}
+                  >
+                    {member.isActive ? "Active" : "Inactive"}
+                  </span>
                 </div>
-                <span
-                  className={cn(
-                    "text-xs font-medium px-2.5 py-1 rounded-full",
-                    member.confirmed
-                      ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400"
-                      : "bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400"
-                  )}
-                >
-                  {member.confirmed ? "Confirmed" : "Pending"}
-                </span>
+                <div className="space-y-1.5 text-xs text-surface-500 dark:text-surface-400">
+                  <p className="flex items-center gap-2">
+                    <Mail className="w-3 h-3" /> {member.user.email}
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <Users className="w-3 h-3" /> {member.user.role.replace(/_/g, " ")}
+                  </p>
+                </div>
               </div>
-              <div className="space-y-1.5 text-xs text-surface-500 dark:text-surface-400">
-                <p className="flex items-center gap-2">
-                  <MapPin className="w-3 h-3" /> {member.area}
-                </p>
-                <p className="flex items-center gap-2">
-                  <Phone className="w-3 h-3" /> {member.phone}
-                </p>
-                <p className="flex items-center gap-2">
-                  <Mail className="w-3 h-3" /> {member.email}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="neu-card text-center py-12">
+            <Users className="w-12 h-12 text-surface-300 dark:text-surface-600 mx-auto mb-4" />
+            <h3 className="font-semibold text-surface-900 dark:text-surface-100 mb-1">
+              No Team Assigned Yet
+            </h3>
+            <p className="text-sm text-surface-500 dark:text-surface-400">
+              Add team members to begin planning the transition day.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Arrival Schedule */}
