@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useParams } from "next/navigation";
 import {
   ChevronDown,
@@ -14,6 +14,8 @@ import {
   X,
   Flag,
   ListChecks,
+  Circle,
+  Ban,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
@@ -22,17 +24,140 @@ import { ProgressBar } from "@/components/shared/ProgressBar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WORKSTREAM_LIST } from "@/lib/constants";
 
-const statusIcons: Record<string, React.ReactNode> = {
-  NOT_STARTED: <div className="w-5 h-5 rounded-md border-2 border-surface-300 dark:border-surface-600" />,
-  IN_PROGRESS: <Clock className="w-5 h-5 text-primary-500" />,
-  BLOCKED: <AlertTriangle className="w-5 h-5 text-red-500" />,
-  COMPLETE: (
-    <div className="w-5 h-5 rounded-md bg-emerald-500 flex items-center justify-center">
-      <Check className="w-3 h-3 text-white" />
+// ---------------------------------------------------------------------------
+// Status config
+// ---------------------------------------------------------------------------
+
+const STATUS_OPTIONS = [
+  {
+    value: "NOT_STARTED",
+    label: "Not Started",
+    icon: <Circle className="w-3.5 h-3.5" />,
+    iconColor: "text-gray-400",
+    bg: "bg-gray-50",
+    ring: "ring-gray-200",
+  },
+  {
+    value: "IN_PROGRESS",
+    label: "In Progress",
+    icon: <Clock className="w-3.5 h-3.5" />,
+    iconColor: "text-teal-500",
+    bg: "bg-teal-50",
+    ring: "ring-teal-200",
+  },
+  {
+    value: "COMPLETE",
+    label: "Done",
+    icon: <Check className="w-3.5 h-3.5" />,
+    iconColor: "text-emerald-600",
+    bg: "bg-emerald-50",
+    ring: "ring-emerald-200",
+  },
+  {
+    value: "BLOCKED",
+    label: "Blocked",
+    icon: <AlertTriangle className="w-3.5 h-3.5" />,
+    iconColor: "text-red-500",
+    bg: "bg-red-50",
+    ring: "ring-red-200",
+  },
+  {
+    value: "NA",
+    label: "N/A",
+    icon: <Ban className="w-3.5 h-3.5" />,
+    iconColor: "text-gray-400",
+    bg: "bg-gray-50",
+    ring: "ring-gray-200",
+  },
+] as const;
+
+const statusMap = Object.fromEntries(STATUS_OPTIONS.map((s) => [s.value, s]));
+
+// ---------------------------------------------------------------------------
+// StatusDropdown component
+// ---------------------------------------------------------------------------
+
+function StatusDropdown({
+  currentStatus,
+  onChangeStatus,
+  disabled,
+}: {
+  currentStatus: string;
+  onChangeStatus: (status: string) => void;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const current = statusMap[currentStatus] ?? statusMap.NOT_STARTED;
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!disabled) setOpen(!open);
+        }}
+        disabled={disabled}
+        className={cn(
+          "flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium transition-all",
+          "ring-1 ring-inset",
+          current.bg,
+          current.ring,
+          current.iconColor,
+          "hover:shadow-sm",
+          disabled && "opacity-50 cursor-not-allowed"
+        )}
+      >
+        {current.icon}
+        <span className="hidden sm:inline">{current.label}</span>
+        <ChevronDown className="w-3 h-3 opacity-50" />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full mt-1 z-50 w-40 rounded-xl bg-white border border-gray-200 shadow-lg shadow-black/5 py-1 animate-scale-in">
+          {STATUS_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={(e) => {
+                e.stopPropagation();
+                onChangeStatus(opt.value);
+                setOpen(false);
+              }}
+              className={cn(
+                "w-full flex items-center gap-2 px-3 py-2 text-xs font-medium transition-colors",
+                currentStatus === opt.value
+                  ? "bg-gray-100 text-gray-900"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+              )}
+            >
+              <span className={opt.iconColor}>{opt.icon}</span>
+              {opt.label}
+              {currentStatus === opt.value && (
+                <Check className="w-3 h-3 ml-auto text-teal-500" />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
-  ),
-  NA: <X className="w-5 h-5 text-surface-400" />,
-};
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Filter options
+// ---------------------------------------------------------------------------
 
 const phases = [
   { value: "", label: "All Phases" },
@@ -42,7 +167,7 @@ const phases = [
   { value: "WEEK_2", label: "Week 2" },
 ];
 
-const statuses = [
+const filterStatuses = [
   { value: "", label: "All Status" },
   { value: "NOT_STARTED", label: "Not Started" },
   { value: "IN_PROGRESS", label: "In Progress" },
@@ -50,6 +175,10 @@ const statuses = [
   { value: "COMPLETE", label: "Complete" },
   { value: "NA", label: "N/A" },
 ];
+
+// ---------------------------------------------------------------------------
+// Skeleton
+// ---------------------------------------------------------------------------
 
 function ChecklistSkeleton() {
   return (
@@ -67,11 +196,11 @@ function ChecklistSkeleton() {
               <Skeleton className="h-4 w-8" />
             </div>
           </div>
-          <div className="border-t border-surface-200 dark:border-surface-800">
+          <div className="border-t border-gray-200">
             {[1, 2, 3, 4].map((j) => (
               <div
                 key={j}
-                className="flex items-center gap-3 px-6 py-3 border-b border-surface-100 dark:border-surface-800/50"
+                className="flex items-center gap-3 px-6 py-3 border-b border-gray-100"
               >
                 <Skeleton className="w-5 h-5 rounded-md" />
                 <Skeleton className="h-4 flex-1 max-w-md" />
@@ -85,6 +214,10 @@ function ChecklistSkeleton() {
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
 
 export default function ChecklistPage() {
   const params = useParams();
@@ -120,10 +253,9 @@ export default function ChecklistPage() {
     },
   });
 
-  const handleToggleComplete = useCallback(
-    (taskId: string, currentStatus: string) => {
-      const newStatus = currentStatus === "COMPLETE" ? "NOT_STARTED" : "COMPLETE";
-      updateStatus.mutate({ id: taskId, status: newStatus });
+  const handleStatusChange = useCallback(
+    (taskId: string, newStatus: string) => {
+      updateStatus.mutate({ id: taskId, status: newStatus as any });
     },
     [updateStatus]
   );
@@ -183,22 +315,22 @@ export default function ChecklistPage() {
     <div className="space-y-4">
       {/* Task Summary */}
       <div className="flex flex-wrap items-center gap-4 text-sm">
-        <span className="flex items-center gap-2 text-surface-700 dark:text-surface-200">
-          <ListChecks className="w-4 h-4 text-primary-500" />
+        <span className="flex items-center gap-2 text-gray-700">
+          <ListChecks className="w-4 h-4 text-teal-500" />
           <span className="font-semibold">{totalTasks}</span> tasks
         </span>
-        <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+        <span className="flex items-center gap-1.5 text-emerald-600">
           <Check className="w-3.5 h-3.5" />
           {completedTasks} done
         </span>
         {inProgressTasks > 0 && (
-          <span className="flex items-center gap-1.5 text-primary-600 dark:text-primary-400">
+          <span className="flex items-center gap-1.5 text-teal-600">
             <Clock className="w-3.5 h-3.5" />
             {inProgressTasks} in progress
           </span>
         )}
         {blockedTasks > 0 && (
-          <span className="flex items-center gap-1.5 text-red-600 dark:text-red-400">
+          <span className="flex items-center gap-1.5 text-red-600">
             <AlertTriangle className="w-3.5 h-3.5" />
             {blockedTasks} blocked
           </span>
@@ -208,7 +340,7 @@ export default function ChecklistPage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
             placeholder="Search tasks..."
@@ -246,7 +378,7 @@ export default function ChecklistPage() {
             onChange={(e) => setStatus(e.target.value)}
             className="neu-input w-auto py-2 text-sm"
           >
-            {statuses.map((s) => (
+            {filterStatuses.map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
               </option>
@@ -261,8 +393,8 @@ export default function ChecklistPage() {
       {/* Empty State */}
       {!isLoading && totalTasks === 0 && (
         <div className="neu-card text-center py-12">
-          <ListChecks className="w-10 h-10 text-surface-300 dark:text-surface-600 mx-auto mb-3" />
-          <p className="text-surface-500 dark:text-surface-400">
+          <ListChecks className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500">
             No tasks found matching your filters.
           </p>
         </div>
@@ -270,7 +402,7 @@ export default function ChecklistPage() {
 
       {/* Checklist grouped by workstream */}
       {!isLoading && (
-        <div className="space-y-4">
+        <div className="space-y-5">
           {groupedTasks.map((ws) => {
             const allWsTasks = ws.sections.flatMap((s) => s.tasks);
             const wsDone = allWsTasks.filter(
@@ -280,37 +412,40 @@ export default function ChecklistPage() {
             const isCollapsed = collapsedWorkstreams.has(ws.name);
 
             return (
-              <div key={ws.name} className="neu-card p-0 overflow-hidden">
+              <div
+                key={ws.name}
+                className="rounded-2xl border border-gray-200 bg-white shadow-sm shadow-black/[0.03] overflow-hidden"
+              >
                 {/* Workstream Header */}
                 <button
                   onClick={() => toggleWorkstream(ws.name)}
-                  className="w-full flex items-center justify-between px-6 py-4 hover:bg-surface-50 dark:hover:bg-surface-900/30 transition-colors"
+                  className="w-full flex items-center justify-between px-6 py-4 bg-gray-50/80 hover:bg-gray-100/80 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     {isCollapsed ? (
-                      <ChevronRight className="w-5 h-5 text-surface-400" />
+                      <ChevronRight className="w-5 h-5 text-gray-400" />
                     ) : (
-                      <ChevronDown className="w-5 h-5 text-surface-400" />
+                      <ChevronDown className="w-5 h-5 text-gray-400" />
                     )}
-                    <h3 className="text-base font-bold uppercase tracking-wide text-surface-800 dark:text-surface-100">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-gray-800">
                       {ws.name}
                     </h3>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-sm text-surface-500 dark:text-surface-400">
+                    <span className="text-sm text-gray-500">
                       {wsDone}/{wsTotal}
                     </span>
                     <div className="w-24">
                       <ProgressBar value={wsDone} max={wsTotal} size="sm" />
                     </div>
-                    <span className="text-sm font-medium text-surface-500 dark:text-surface-400">
+                    <span className="text-sm font-medium text-gray-500">
                       {wsTotal > 0 ? Math.round((wsDone / wsTotal) * 100) : 0}%
                     </span>
                   </div>
                 </button>
 
                 {!isCollapsed && (
-                  <div className="border-t border-surface-200 dark:border-surface-800">
+                  <div className="border-t border-gray-200">
                     {ws.sections.map((section) => {
                       const sectionKey = `${ws.name}:${section.name}`;
                       const sectionCollapsed = collapsedSections.has(sectionKey);
@@ -325,20 +460,20 @@ export default function ChecklistPage() {
                           {/* Section Header */}
                           <button
                             onClick={() => toggleSection(sectionKey)}
-                            className="w-full flex items-center justify-between px-6 py-2.5 bg-surface-50 dark:bg-surface-900/30 hover:bg-surface-100 dark:hover:bg-surface-900/50 transition-colors"
+                            className="w-full flex items-center justify-between px-6 py-2.5 bg-gray-50/50 hover:bg-gray-100/60 transition-colors border-b border-gray-100"
                           >
                             <div className="flex items-center gap-2">
                               {sectionCollapsed ? (
-                                <ChevronRight className="w-4 h-4 text-surface-400" />
+                                <ChevronRight className="w-4 h-4 text-gray-400" />
                               ) : (
-                                <ChevronDown className="w-4 h-4 text-surface-400" />
+                                <ChevronDown className="w-4 h-4 text-gray-400" />
                               )}
-                              <span className="text-sm font-semibold text-surface-700 dark:text-surface-200">
+                              <span className="text-sm font-semibold text-gray-700">
                                 {section.name}
                               </span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-xs text-surface-500 dark:text-surface-400">
+                              <span className="text-xs text-gray-500">
                                 {sDone}/{sTotal}
                               </span>
                               {allDone && (
@@ -349,28 +484,27 @@ export default function ChecklistPage() {
 
                           {/* Tasks */}
                           {!sectionCollapsed && (
-                            <div className="divide-y divide-surface-100 dark:divide-surface-800/50">
+                            <div className="divide-y divide-gray-100">
                               {section.tasks.map((task) => (
                                 <div
                                   key={task.id}
                                   className={cn(
-                                    "flex items-center gap-3 px-6 py-3 hover:bg-surface-50 dark:hover:bg-surface-900/20 transition-colors",
-                                    task.status === "BLOCKED" &&
-                                      "bg-red-50/50 dark:bg-red-950/10",
+                                    "flex items-center gap-3 px-6 py-3 transition-colors",
+                                    task.status === "BLOCKED"
+                                      ? "bg-red-50/40"
+                                      : "hover:bg-gray-50/60",
                                     selectedTask === task.id &&
-                                      "bg-primary-50/50 dark:bg-primary-950/10"
+                                      "bg-teal-50/40"
                                   )}
                                 >
-                                  {/* Checkbox / Status toggle */}
-                                  <button
-                                    onClick={() =>
-                                      handleToggleComplete(task.id, task.status)
+                                  {/* Status dropdown */}
+                                  <StatusDropdown
+                                    currentStatus={task.status}
+                                    onChangeStatus={(s) =>
+                                      handleStatusChange(task.id, s)
                                     }
-                                    className="shrink-0"
                                     disabled={updateStatus.isPending}
-                                  >
-                                    {statusIcons[task.status] || statusIcons.NOT_STARTED}
-                                  </button>
+                                  />
 
                                   {/* Title */}
                                   <button
@@ -382,8 +516,8 @@ export default function ChecklistPage() {
                                     className={cn(
                                       "flex-1 text-sm text-left",
                                       task.status === "COMPLETE"
-                                        ? "line-through text-surface-400 dark:text-surface-500"
-                                        : "text-surface-800 dark:text-surface-100"
+                                        ? "line-through text-gray-400"
+                                        : "text-gray-800"
                                     )}
                                   >
                                     {task.title}
@@ -392,7 +526,7 @@ export default function ChecklistPage() {
                                   {/* Blocked flag */}
                                   {task.status === "BLOCKED" && task.flagReason && (
                                     <span
-                                      className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400 max-w-[200px] truncate"
+                                      className="flex items-center gap-1 text-xs text-red-600 max-w-[200px] truncate"
                                       title={task.flagReason}
                                     >
                                       <Flag className="w-3 h-3 shrink-0" />
@@ -407,10 +541,9 @@ export default function ChecklistPage() {
 
                                   {/* Meta */}
                                   <div className="hidden sm:flex items-center gap-3 shrink-0">
-                                    {/* Assignee avatar */}
                                     {task.assignedTo && (
                                       <span
-                                        className="text-xs text-surface-500 dark:text-surface-400 w-16 text-right truncate"
+                                        className="text-xs text-gray-500 w-16 text-right truncate"
                                         title={task.assignedTo.name}
                                       >
                                         {task.assignedTo.avatar ? (
@@ -424,9 +557,8 @@ export default function ChecklistPage() {
                                       </span>
                                     )}
 
-                                    {/* Due date */}
                                     {task.dueDate && (
-                                      <span className="text-xs text-surface-400 w-14 text-right">
+                                      <span className="text-xs text-gray-400 w-14 text-right">
                                         {new Date(task.dueDate).toLocaleDateString(
                                           "en-US",
                                           { month: "short", day: "numeric" }
@@ -434,17 +566,15 @@ export default function ChecklistPage() {
                                       </span>
                                     )}
 
-                                    {/* Files count */}
                                     {task._count?.files > 0 && (
-                                      <span className="flex items-center gap-1 text-xs text-surface-400">
+                                      <span className="flex items-center gap-1 text-xs text-gray-400">
                                         <Paperclip className="w-3 h-3" />
                                         {task._count.files}
                                       </span>
                                     )}
 
-                                    {/* Comments count */}
                                     {task._count?.comments > 0 && (
-                                      <span className="flex items-center gap-1 text-xs text-surface-400">
+                                      <span className="flex items-center gap-1 text-xs text-gray-400">
                                         <MessageCircle className="w-3 h-3" />
                                         {task._count.comments}
                                       </span>

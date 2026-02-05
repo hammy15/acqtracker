@@ -33,7 +33,7 @@ const tabs = [
 
 function DealHeaderSkeleton() {
   return (
-    <div className="neu-card">
+    <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm shadow-black/[0.03]">
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-2">
@@ -89,17 +89,17 @@ export default function DealDetailLayout({
       {isLoading ? (
         <DealHeaderSkeleton />
       ) : data ? (
-        <div className="neu-card">
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm shadow-black/[0.03]">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-xl font-bold text-surface-900 dark:text-surface-100">
+                <h1 className="text-xl font-bold text-gray-900">
                   {data.facilityName}
                 </h1>
                 <StatusBadge status={data.facilityType} />
                 <StatusBadge status={data.status} />
               </div>
-              <p className="text-surface-500 dark:text-surface-400">
+              <p className="text-gray-500">
                 {data.city}, {data.state} &middot; {data.bedCount} beds
                 {data.dealLead && <> &middot; Lead: {data.dealLead.name}</>}
               </p>
@@ -107,7 +107,7 @@ export default function DealDetailLayout({
             <div className="flex items-center gap-6">
               {data.targetCloseDate && (
                 <div className="text-right">
-                  <p className="text-sm text-surface-500 dark:text-surface-400">
+                  <p className="text-sm text-gray-500">
                     Close: {new Date(data.targetCloseDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                   </p>
                   {(() => {
@@ -116,7 +116,7 @@ export default function DealDetailLayout({
                         (1000 * 60 * 60 * 24)
                     );
                     return diff > 0 ? (
-                      <p className="text-sm font-medium text-primary-500">
+                      <p className="text-sm font-medium text-teal-500">
                         {diff} days
                       </p>
                     ) : null;
@@ -126,7 +126,7 @@ export default function DealDetailLayout({
               {data._taskStats && (
                 <div className="w-32">
                   <ProgressBar value={data._taskStats.progress} showLabel size="md" />
-                  <p className="text-xs text-surface-400 mt-1 text-right">
+                  <p className="text-xs text-gray-400 mt-1 text-right">
                     {data._taskStats.completed}/{data._taskStats.total} tasks
                   </p>
                 </div>
@@ -136,7 +136,7 @@ export default function DealDetailLayout({
         </div>
       ) : (
         <div className="neu-card text-center py-8">
-          <p className="text-surface-500 dark:text-surface-400">
+          <p className="text-gray-500">
             Deal not found.
           </p>
         </div>
@@ -151,8 +151,8 @@ export default function DealDetailLayout({
             className={cn(
               "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors",
               activeTab === tab.id
-                ? "bg-primary-500/10 text-primary-600 dark:text-primary-400"
-                : "text-surface-500 dark:text-surface-400 hover:bg-surface-200 dark:hover:bg-surface-800"
+                ? "bg-teal-50 text-teal-700"
+                : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
             )}
           >
             <tab.icon className="w-4 h-4" />
