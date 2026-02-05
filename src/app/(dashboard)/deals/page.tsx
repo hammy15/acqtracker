@@ -25,20 +25,20 @@ function DealCardSkeleton() {
     <div className="neu-card animate-pulse block">
       <div className="flex items-start justify-between mb-3">
         <div className="min-w-0">
-          <div className="h-5 w-40 bg-surface-200 dark:bg-surface-700 rounded mb-2" />
-          <div className="h-4 w-32 bg-surface-200 dark:bg-surface-700 rounded" />
+          <div className="h-5 w-40 bg-gray-200 rounded mb-2" />
+          <div className="h-4 w-32 bg-gray-200 rounded" />
         </div>
-        <div className="h-5 w-20 bg-surface-200 dark:bg-surface-700 rounded-full" />
+        <div className="h-5 w-20 bg-gray-200 rounded-full" />
       </div>
       <div className="space-y-3">
         <div className="flex justify-between">
-          <div className="h-4 w-28 bg-surface-200 dark:bg-surface-700 rounded" />
-          <div className="h-4 w-24 bg-surface-200 dark:bg-surface-700 rounded" />
+          <div className="h-4 w-28 bg-gray-200 rounded" />
+          <div className="h-4 w-24 bg-gray-200 rounded" />
         </div>
-        <div className="h-3 w-full bg-surface-200 dark:bg-surface-700 rounded-full" />
+        <div className="h-3 w-full bg-gray-200 rounded-full" />
         <div className="flex justify-between">
-          <div className="h-3 w-20 bg-surface-200 dark:bg-surface-700 rounded" />
-          <div className="h-5 w-10 bg-surface-200 dark:bg-surface-700 rounded-full" />
+          <div className="h-3 w-20 bg-gray-200 rounded" />
+          <div className="h-5 w-10 bg-gray-200 rounded-full" />
         </div>
       </div>
     </div>
@@ -78,10 +78,10 @@ export default function DealsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-surface-100">
+          <h1 className="text-2xl font-bold text-gray-900">
             Deals
           </h1>
-          <p className="text-surface-500 dark:text-surface-400 mt-1">
+          <p className="text-gray-500 mt-1">
             {total} active acquisition{total !== 1 ? "s" : ""}
           </p>
         </div>
@@ -94,7 +94,7 @@ export default function DealsPage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
             placeholder="Search deals..."
@@ -121,16 +121,16 @@ export default function DealsPage() {
               </option>
             ))}
           </select>
-          <div className="flex rounded-xl overflow-hidden border border-surface-200 dark:border-surface-700">
+          <div className="flex rounded-xl overflow-hidden border border-gray-200">
             <button
               onClick={() => setView("grid")}
-              className={`p-2.5 ${view === "grid" ? "bg-primary-500 text-white" : "bg-surface-200 dark:bg-surface-800 text-surface-500"}`}
+              className={`p-2.5 ${view === "grid" ? "bg-teal-500 text-white" : "bg-gray-100 text-gray-500"}`}
             >
               <LayoutGrid className="w-4 h-4" />
             </button>
             <button
               onClick={() => setView("list")}
-              className={`p-2.5 ${view === "list" ? "bg-primary-500 text-white" : "bg-surface-200 dark:bg-surface-800 text-surface-500"}`}
+              className={`p-2.5 ${view === "list" ? "bg-teal-500 text-white" : "bg-gray-100 text-gray-500"}`}
             >
               <List className="w-4 h-4" />
             </button>
@@ -151,8 +151,8 @@ export default function DealsPage() {
               }}
               className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
                 statusFilter === s
-                  ? "bg-primary-500 text-white"
-                  : "bg-surface-200 dark:bg-surface-800 text-surface-600 dark:text-surface-300 hover:bg-surface-300 dark:hover:bg-surface-700"
+                  ? "bg-teal-500 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
               {s === "ALL" ? "All" : s.replace(/_/g, " ")} ({statsLoading ? "-" : count})
@@ -180,10 +180,10 @@ export default function DealsPage() {
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="min-w-0">
-                      <h3 className="font-semibold text-surface-900 dark:text-surface-100 group-hover:text-primary-500 transition-colors truncate">
+                      <h3 className="font-semibold text-gray-900 group-hover:text-teal-600 transition-colors truncate">
                         {deal.name}
                       </h3>
-                      <p className="text-sm text-surface-500 dark:text-surface-400">
+                      <p className="text-sm text-gray-500">
                         {deal.city}, {deal.state} &middot; {deal.bedCount} beds
                       </p>
                     </div>
@@ -191,14 +191,14 @@ export default function DealsPage() {
                   </div>
 
                   <div className="space-y-3">
-                    <div className="flex justify-between text-sm text-surface-500 dark:text-surface-400">
+                    <div className="flex justify-between text-sm text-gray-500">
                       <span>Lead: {deal.dealLead?.name ?? "Unassigned"}</span>
                       <span>Close: {closeDate}</span>
                     </div>
 
                     <ProgressBar value={progress} showLabel />
 
-                    <div className="flex justify-between text-xs text-surface-400">
+                    <div className="flex justify-between text-xs text-gray-400">
                       <span>{tasksDone}/{tasksTotal} tasks</span>
                       <StatusBadge status={deal.facilityType} />
                     </div>
@@ -218,7 +218,7 @@ export default function DealsPage() {
           >
             Previous
           </button>
-          <span className="text-sm text-surface-500 dark:text-surface-400 px-4">
+          <span className="text-sm text-gray-500 px-4">
             Page {page} of {totalPages}
           </span>
           <button

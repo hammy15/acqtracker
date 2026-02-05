@@ -40,13 +40,17 @@ export default function LoginPage() {
       <div className="neu-card">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-primary-500 flex items-center justify-center text-white mb-4">
+          <div
+            className="w-14 h-14 rounded-2xl flex items-center justify-center text-white mb-4"
+            style={{
+              background: "linear-gradient(135deg, #14b8a6, #0d9488)",
+              boxShadow: "0 4px 14px rgba(20, 184, 166, 0.3)",
+            }}
+          >
             <Building2 className="w-7 h-7" />
           </div>
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-surface-100">
-            AcqTracker
-          </h1>
-          <p className="text-sm text-surface-500 dark:text-surface-400 mt-1">
+          <h1 className="text-2xl font-bold text-gray-900">AcqTracker</h1>
+          <p className="text-sm text-gray-500 mt-1">
             Healthcare Acquisition Management
           </p>
         </div>
@@ -54,13 +58,13 @@ export default function LoginPage() {
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-sm">
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">
               {error}
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
               Email
             </label>
             <input
@@ -68,13 +72,13 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="neu-input"
-              placeholder="admin@cascadiahc.com"
+              placeholder="admin@acqtracker.com"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
               Password
             </label>
             <div className="relative">
@@ -89,7 +93,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600 dark:hover:text-surface-300"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
                 {showPassword ? (
                   <EyeOff className="w-4 h-4" />
@@ -109,11 +113,11 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="text-center text-sm text-surface-500 dark:text-surface-400 mt-6">
+        <p className="text-center text-sm text-gray-500 mt-6">
           Don&apos;t have an account?{" "}
           <Link
             href="/register"
-            className="text-primary-500 hover:text-primary-600 font-medium"
+            className="text-teal-600 hover:text-teal-700 font-medium"
           >
             Contact your admin
           </Link>
