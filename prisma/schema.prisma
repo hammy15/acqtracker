@@ -1,0 +1,500 @@
+// AcqTracker - Healthcare Facility Acquisition Tracker
+// Prisma Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  REGIONAL_LEAD
+  DEAL_LEAD
+  DEPARTMENT_LEAD
+  TEAM_MEMBER
+  VIEWER
+}
+
+enum DealStatus {
+  PIPELINE
+  LOI
+  DUE_DILIGENCE
+  CHOW_FILED
+  CLOSING
+  TRANSITION_DAY
+  WEEK_1
+  WEEK_2
+  POST_CLOSE
+  ARCHIVED
+}
+
+enum FacilityType {
+  SNF
+  ALF
+  ILF
+  HOSPICE
+  IN_HOME
+}
+
+enum TaskStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  BLOCKED
+  COMPLETE
+  NA
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum TaskPhase {
+  PRE_CLOSE
+  DAY_OF
+  WEEK_1
+  WEEK_2
+}
+
+enum TemplateType {
+  PRE_CLOSE
+  DAY_OF
+  WEEK_1
+  WEEK_2
+}
+
+enum FeedPostType {
+  MESSAGE
+  TASK_COMPLETE
+  TASK_FLAGGED
+  TASK_ASSIGNED
+  PHOTO
+  FILE
+  SYSTEM_EVENT
+}
+
+enum PresenceStatus {
+  ACTIVE
+  IDLE
+  OFFLINE
+}
+
+enum ChannelType {
+  AUTO
+  CUSTOM
+}
+
+enum ActivityAction {
+  DEAL_CREATED
+  DEAL_STATUS_CHANGED
+  DEAL_ARCHIVED
+  TASK_CREATED
+  TASK_COMPLETED
+  TASK_STATUS_CHANGED
+  TASK_ASSIGNED
+  TASK_FLAGGED
+  TASK_UNFLAGGED
+  FILE_UPLOADED
+  FILE_DELETED
+  COMMENT_ADDED
+  CHAT_MESSAGE
+  FEED_POST
+  USER_ASSIGNED_TO_BUILDING
+  TRANSITION_DAY_STARTED
+  BUILDING_ASSIGNMENT_CHANGED
+}
+
+enum OnSiteRole {
+  BUILDING_LEAD
+  TEAM_MEMBER
+}
+
+// ─────────────────────────────────────────────
+// MODELS
+// ─────────────────────────────────────────────
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  logo      String?
+  settings  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+  deals     Deal[]
+  templates Template[]
+  regions   Region[]
+  stateReqs StateRequirement[]
+}
+
+model Region {
+  id             String   @id @default(cuid())
+  orgId          String
+  name           String
+  states         String[]
+  regionalLeadId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  org            Organization @relation(fields: [orgId], references: [id])
+  regionalLead   User?        @relation("RegionLead", fields: [regionalLeadId], references: [id])
+  deals          Deal[]
+  users          User[]       @relation("UserRegion")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  orgId        String
+  email        String    @unique
+  passwordHash String
+  name         String
+  role         UserRole  @default(TEAM_MEMBER)
+  phone        String?
+  avatar       String?
+  regionId     String?
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  org                Organization        @relation(fields: [orgId], references: [id])
+  region             Region?             @relation("UserRegion", fields: [regionId], references: [id])
+  ledRegions         Region[]            @relation("RegionLead")
+  ledDeals           Deal[]              @relation("DealLead")
+  assignedTasks      Task[]              @relation("TaskAssignee")
+  completedTasks     Task[]              @relation("TaskCompleter")
+  uploadedFiles      TaskFile[]          @relation("FileUploader")
+  taskComments       TaskComment[]
+  chatMessages       ChatMessage[]
+  feedPosts          FeedPost[]
+  activityLogs       ActivityLog[]
+  buildingAssignments BuildingAssignment[]
+  presence           UserPresence[]
+  createdTemplates   Template[]          @relation("TemplateCreator")
+
+  @@index([orgId])
+  @@index([email])
+}
+
+model Deal {
+  id                     String       @id @default(cuid())
+  orgId                  String
+  name                   String
+  facilityName           String
+  facilityType           FacilityType
+  state                  String
+  address                String?
+  city                   String?
+  zipCode                String?
+  bedCount               Int?
+  currentOwner           String?
+  purchasePrice          Decimal?     @db.Decimal(12, 2)
+  targetCloseDate        DateTime?
+  actualCloseDate        DateTime?
+  status                 DealStatus   @default(PIPELINE)
+  dealLeadId             String?
+  regionId               String?
+  templateId             String?
+  transitionDayStartedAt DateTime?
+  archivedAt             DateTime?
+  archivedBy             String?
+  archiveNotes           String?
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+
+  org                Organization        @relation(fields: [orgId], references: [id])
+  dealLead           User?               @relation("DealLead", fields: [dealLeadId], references: [id])
+  region             Region?             @relation(fields: [regionId], references: [id])
+  template           Template?           @relation(fields: [templateId], references: [id])
+  tasks              Task[]
+  taskFiles          TaskFile[]
+  chatChannels       ChatChannel[]
+  feedPosts          FeedPost[]
+  activityLogs       ActivityLog[]
+  buildingAssignments BuildingAssignment[]
+  userPresence       UserPresence[]
+  dueDiligenceDocs   DueDiligenceDoc[]
+
+  @@index([orgId, status])
+  @@index([dealLeadId])
+  @@index([state])
+}
+
+model Template {
+  id           String       @id @default(cuid())
+  orgId        String
+  name         String
+  templateType TemplateType @default(PRE_CLOSE)
+  facilityType FacilityType?
+  state        String?
+  isDefault    Boolean      @default(false)
+  version      Int          @default(1)
+  createdById  String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  org           Organization   @relation(fields: [orgId], references: [id])
+  createdBy     User?          @relation("TemplateCreator", fields: [createdById], references: [id])
+  templateTasks TemplateTask[]
+  deals         Deal[]
+
+  @@index([orgId, templateType, facilityType])
+}
+
+model TemplateTask {
+  id              String         @id @default(cuid())
+  templateId      String
+  workstream      String
+  section         String?
+  title           String
+  description     String?
+  parentTaskId    String?
+  sortOrder       Int            @default(0)
+  indentLevel     Int            @default(0)
+  defaultRole     String?
+  daysOffset      Int            @default(0)
+  isRequired      Boolean        @default(true)
+  isStateSpecific Boolean        @default(false)
+  facilityTypes   FacilityType[]
+  requiresPhoto   Boolean        @default(false)
+  phase           TaskPhase      @default(PRE_CLOSE)
+  createdAt       DateTime       @default(now())
+
+  template   Template       @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  parentTask TemplateTask?  @relation("TemplateTaskHierarchy", fields: [parentTaskId], references: [id])
+  childTasks TemplateTask[] @relation("TemplateTaskHierarchy")
+
+  @@index([templateId, sortOrder])
+}
+
+model Task {
+  id             String     @id @default(cuid())
+  dealId         String
+  templateTaskId String?
+  title          String
+  description    String?
+  workstream     String
+  section        String?
+  phase          TaskPhase  @default(PRE_CLOSE)
+  assignedToId   String?
+  dueDate        DateTime?
+  completedDate  DateTime?
+  completedById  String?
+  status         TaskStatus @default(NOT_STARTED)
+  priority       TaskPriority @default(MEDIUM)
+  parentTaskId   String?
+  sortOrder      Int        @default(0)
+  indentLevel    Int        @default(0)
+  notes          String?
+  flagReason     String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  deal        Deal          @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  assignedTo  User?         @relation("TaskAssignee", fields: [assignedToId], references: [id])
+  completedBy User?         @relation("TaskCompleter", fields: [completedById], references: [id])
+  parentTask  Task?         @relation("TaskHierarchy", fields: [parentTaskId], references: [id])
+  childTasks  Task[]        @relation("TaskHierarchy")
+  files       TaskFile[]
+  comments    TaskComment[]
+
+  @@index([dealId, phase, status])
+  @@index([assignedToId, status])
+  @@index([dealId, workstream])
+}
+
+model TaskFile {
+  id           String   @id @default(cuid())
+  taskId       String?
+  dealId       String
+  fileName     String
+  filePath     String
+  fileType     String
+  fileSize     Int
+  uploadedById String
+  description  String?
+  tags         String[]
+  isPhoto      Boolean  @default(false)
+  gpsLat       Float?
+  gpsLon       Float?
+  createdAt    DateTime @default(now())
+
+  task       Task? @relation(fields: [taskId], references: [id])
+  deal       Deal  @relation(fields: [dealId], references: [id])
+  uploadedBy User  @relation("FileUploader", fields: [uploadedById], references: [id])
+
+  @@index([dealId])
+  @@index([taskId])
+}
+
+model TaskComment {
+  id              String   @id @default(cuid())
+  taskId          String
+  userId          String
+  body            String
+  parentCommentId String?
+  createdAt       DateTime @default(now())
+
+  task          Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id])
+  parentComment TaskComment?  @relation("CommentThread", fields: [parentCommentId], references: [id])
+  replies       TaskComment[] @relation("CommentThread")
+
+  @@index([taskId])
+}
+
+model DueDiligenceDoc {
+  id            String    @id @default(cuid())
+  dealId        String
+  documentName  String
+  category      String
+  requestedDate DateTime?
+  receivedDate  DateTime?
+  status        String    @default("NOT_REQUESTED")
+  filePath      String?
+  notes         String?
+  sortOrder     Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  deal Deal @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([dealId])
+}
+
+model ChatChannel {
+  id          String      @id @default(cuid())
+  dealId      String
+  name        String
+  channelType ChannelType @default(AUTO)
+  createdAt   DateTime    @default(now())
+
+  deal     Deal          @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@unique([dealId, name])
+  @@index([dealId])
+}
+
+model ChatMessage {
+  id              String   @id @default(cuid())
+  channelId       String
+  userId          String
+  body            String
+  fileId          String?
+  isSystemMessage Boolean  @default(false)
+  mentions        String[]
+  createdAt       DateTime @default(now())
+
+  channel ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id])
+
+  @@index([channelId, createdAt])
+}
+
+model FeedPost {
+  id       String       @id @default(cuid())
+  dealId   String
+  userId   String
+  postType FeedPostType
+  body     String?
+  taskId   String?
+  fileId   String?
+  metadata Json?
+  createdAt DateTime    @default(now())
+
+  deal Deal @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([dealId, createdAt])
+}
+
+model BuildingAssignment {
+  id           String     @id @default(cuid())
+  dealId       String
+  userId       String
+  onSiteRole   OnSiteRole @default(TEAM_MEMBER)
+  assignedById String?
+  isActive     Boolean    @default(true)
+  assignedAt   DateTime   @default(now())
+
+  deal Deal @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([dealId, userId])
+  @@index([userId])
+}
+
+model UserPresence {
+  id         String         @id @default(cuid())
+  userId     String
+  dealId     String
+  status     PresenceStatus @default(OFFLINE)
+  lastSeenAt DateTime       @default(now())
+  deviceInfo String?
+
+  user User @relation(fields: [userId], references: [id])
+  deal Deal @relation(fields: [dealId], references: [id])
+
+  @@unique([userId, dealId])
+}
+
+model StateRequirement {
+  id                    String       @id @default(cuid())
+  orgId                 String
+  stateCode             String
+  facilityType          FacilityType
+  licensingBody         String?
+  licensingBodyUrl      String?
+  contactInfo           Json?
+  chowFormUrl           String?
+  requirementsChecklist Json?
+  notificationsRequired Json?
+  suretyBondRequired    Boolean      @default(false)
+  suretyBondAmount      Decimal?     @db.Decimal(10, 2)
+  conRequired           Boolean      @default(false)
+  backgroundCheckRequired Boolean    @default(false)
+  processingTimelineDays Int?
+  adminLicenseReqs      String?
+  notes                 String?
+  updatedById           String?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  org Organization @relation(fields: [orgId], references: [id])
+
+  @@unique([orgId, stateCode, facilityType])
+  @@index([stateCode])
+}
+
+model ActivityLog {
+  id         String         @id @default(cuid())
+  dealId     String
+  userId     String?
+  action     ActivityAction
+  entityType String
+  entityId   String?
+  oldValue   Json?
+  newValue   Json?
+  source     String         @default("web")
+  timestamp  DateTime       @default(now())
+
+  deal Deal  @relation(fields: [dealId], references: [id])
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([dealId, timestamp])
+  @@index([userId])
+  @@index([entityType, entityId])
+}
