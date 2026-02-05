@@ -322,6 +322,8 @@ async function main() {
     )
   );
 
+  const channelNames = ["general", "clinical", "regulatory", "facilities"];
+
   // ─────────────────────────────────────────────
   // 7. SAMPLE DEALS
   // ─────────────────────────────────────────────
@@ -446,6 +448,144 @@ async function main() {
   );
 
   // ─────────────────────────────────────────────
+  // 8b. TASKS FOR MOUNTAIN VIEW DEAL (from template)
+  // ─────────────────────────────────────────────
+  console.log("Creating tasks for Mountain View deal...");
+
+  const mountainViewTasks = await Promise.all(
+    createdTemplateTasks.map((tt, i) => {
+      // LOI stage: first 5 complete, next 3 in-progress, 1 blocked, rest not started
+      let status: "COMPLETE" | "IN_PROGRESS" | "BLOCKED" | "NOT_STARTED" = "NOT_STARTED";
+      let completedDate: Date | null = null;
+      let completedById: string | null = null;
+      let flagReason: string | null = null;
+      let assignedToId: string | null = null;
+
+      if (i < 15) {
+        assignedToId = assignees[i % assignees.length].id;
+      }
+
+      if (i < 5) {
+        status = "COMPLETE";
+        completedDate = new Date(now.getTime() - (10 - i) * 86400000);
+        completedById = assignedToId ?? sarah.id;
+      } else if (i < 8) {
+        status = "IN_PROGRESS";
+      } else if (i === 8) {
+        status = "BLOCKED";
+        flagReason = "Current owner has not yet provided dietary service records. Follow-up email sent.";
+      }
+
+      return prisma.task.create({
+        data: {
+          dealId: mountainView.id,
+          templateTaskId: tt.id,
+          title: preCloseTasks[i].title,
+          workstream: preCloseTasks[i].workstream,
+          section: preCloseTasks[i].section,
+          phase: "PRE_CLOSE",
+          sortOrder: preCloseTasks[i].sortOrder,
+          status,
+          priority: i < 3 ? "HIGH" : "MEDIUM",
+          assignedToId,
+          completedDate,
+          completedById,
+          flagReason,
+          dueDate: daysFromNow(Math.floor(i * 2) + 14),
+        },
+      });
+    })
+  );
+
+  // ─────────────────────────────────────────────
+  // 8c. TASKS FOR SUNSET GARDENS DEAL (from template)
+  // ─────────────────────────────────────────────
+  console.log("Creating tasks for Sunset Gardens deal...");
+
+  const sunsetGardensTasks = await Promise.all(
+    createdTemplateTasks.map((tt, i) => {
+      // Pipeline stage: all not started, first 10 assigned
+      const assignedToId = i < 10 ? assignees[i % assignees.length].id : null;
+
+      return prisma.task.create({
+        data: {
+          dealId: sunsetGardens.id,
+          templateTaskId: tt.id,
+          title: preCloseTasks[i].title,
+          workstream: preCloseTasks[i].workstream,
+          section: preCloseTasks[i].section,
+          phase: "PRE_CLOSE",
+          sortOrder: preCloseTasks[i].sortOrder,
+          status: "NOT_STARTED",
+          priority: i < 5 ? "HIGH" : "MEDIUM",
+          assignedToId,
+          dueDate: daysFromNow(Math.floor(i * 2) + 30),
+        },
+      });
+    })
+  );
+
+  // ─────────────────────────────────────────────
+  // 8d. CHAT CHANNELS FOR MOUNTAIN VIEW & SUNSET GARDENS
+  // ─────────────────────────────────────────────
+  console.log("Creating chat channels for other deals...");
+
+  for (const deal of [mountainView, sunsetGardens]) {
+    for (const name of channelNames) {
+      await prisma.chatChannel.create({
+        data: { dealId: deal.id, name, channelType: "AUTO" },
+      });
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // 8e. ACTIVITY LOGS FOR MOUNTAIN VIEW & SUNSET GARDENS
+  // ─────────────────────────────────────────────
+  console.log("Creating activity logs for other deals...");
+
+  await prisma.activityLog.createMany({
+    data: [
+      {
+        dealId: mountainView.id,
+        userId: owen.id,
+        action: "DEAL_CREATED",
+        entityType: "Deal",
+        entityId: mountainView.id,
+        newValue: { name: "Mountain View ALF Acquisition", status: "PIPELINE" },
+        timestamp: new Date(now.getTime() - 15 * 86400000),
+      },
+      {
+        dealId: mountainView.id,
+        userId: owen.id,
+        action: "DEAL_STATUS_CHANGED",
+        entityType: "Deal",
+        entityId: mountainView.id,
+        oldValue: { status: "PIPELINE" },
+        newValue: { status: "LOI" },
+        timestamp: new Date(now.getTime() - 10 * 86400000),
+      },
+      {
+        dealId: mountainView.id,
+        userId: sarah.id,
+        action: "TASK_COMPLETED",
+        entityType: "Task",
+        entityId: mountainViewTasks[0].id,
+        newValue: { title: mountainViewTasks[0].title },
+        timestamp: new Date(now.getTime() - 8 * 86400000),
+      },
+      {
+        dealId: sunsetGardens.id,
+        userId: owen.id,
+        action: "DEAL_CREATED",
+        entityType: "Deal",
+        entityId: sunsetGardens.id,
+        newValue: { name: "Sunset Gardens SNF Acquisition", status: "PIPELINE" },
+        timestamp: new Date(now.getTime() - 5 * 86400000),
+      },
+    ],
+  });
+
+  // ─────────────────────────────────────────────
   // 9. STATE REQUIREMENTS
   // ─────────────────────────────────────────────
   console.log("Creating state requirements...");
@@ -553,9 +693,8 @@ async function main() {
   // ─────────────────────────────────────────────
   // 10. CHAT CHANNELS FOR CEDAR RIDGE
   // ─────────────────────────────────────────────
-  console.log("Creating chat channels...");
+  console.log("Creating chat channels for Cedar Ridge...");
 
-  const channelNames = ["general", "clinical", "regulatory", "facilities"];
   const channels: Record<string, Awaited<ReturnType<typeof prisma.chatChannel.create>>> = {};
 
   for (const name of channelNames) {
@@ -804,9 +943,11 @@ async function main() {
   console.log(`Regions:          2`);
   console.log(`Templates:        2 (Pre-Close: ${preCloseTasks.length} tasks, Day-Of: ${dayOfTasks.length} tasks)`);
   console.log(`Deals:            3`);
-  console.log(`Cedar Ridge Tasks: ${cedarRidgeTasks.length}`);
+  console.log(`Cedar Ridge Tasks: ${cedarRidgeTasks.length} (15 done, 5 in-progress, 2 blocked)`);
+  console.log(`Mountain View Tasks: ${mountainViewTasks.length} (5 done, 3 in-progress, 1 blocked)`);
+  console.log(`Sunset Gardens Tasks: ${sunsetGardensTasks.length} (all not started)`);
   console.log(`State Reqs:       4 (ID, OR, WA, CA)`);
-  console.log(`Chat Channels:    ${channelNames.length}`);
+  console.log(`Chat Channels:    ${channelNames.length * 3} (4 per deal)`);
   console.log(`Building Assigns: 5`);
   console.log("");
   console.log("Admin login: admin@acqtracker.com / password123");
