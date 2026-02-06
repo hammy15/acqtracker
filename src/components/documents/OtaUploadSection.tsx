@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Upload, FileText, Loader2, CheckCircle2, AlertCircle, ChevronRight, Trash2, Sparkles } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
@@ -13,16 +13,23 @@ export function OtaUploadSection({ dealId }: OtaUploadSectionProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const utils = trpc.useUtils();
-  const { data: otaDocs, isLoading } = trpc.ota.getByDeal.useQuery({ dealId });
+  const { data: otaDocs, isLoading } = trpc.ota.getByDeal.useQuery(
+    { dealId },
+    { refetchInterval: isAnalyzing ? 5000 : false },
+  );
   const deleteMutation = trpc.ota.delete.useMutation({
     onSuccess: () => utils.ota.getByDeal.invalidate({ dealId }),
   });
-  const analyzeMutation = trpc.ota.analyze.useMutation({
-    onSuccess: () => utils.ota.getByDeal.invalidate({ dealId }),
-    onError: () => utils.ota.getByDeal.invalidate({ dealId }),
-  });
+
+  // Detect when analysis completes via polling
+  useEffect(() => {
+    if (!otaDocs) return;
+    const hasAnalyzing = otaDocs.some((doc: any) => doc.status === "ANALYZING");
+    setIsAnalyzing(hasAnalyzing);
+  }, [otaDocs]);
 
   const handleUpload = useCallback(async (file: File) => {
     if (!file.type.includes("pdf")) {
@@ -58,14 +65,21 @@ export function OtaUploadSection({ dealId }: OtaUploadSectionProps) {
       // Refresh the list to show the uploaded doc
       await utils.ota.getByDeal.invalidate({ dealId });
 
-      // Step 2: Trigger AI analysis (separate call, longer timeout)
-      analyzeMutation.mutate({ otaDocumentId: documentId });
+      // Step 2: Trigger AI analysis (fire-and-forget, runs in background via after())
+      setIsAnalyzing(true);
+      fetch("/api/ota/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ otaDocumentId: documentId }),
+      }).catch(() => {
+        // Fire-and-forget - errors handled server-side
+      });
     } catch (err: any) {
       setUploadError(err.message || "Upload failed");
     } finally {
       setIsUploading(false);
     }
-  }, [dealId, utils, analyzeMutation]);
+  }, [dealId, utils]);
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -88,7 +102,7 @@ export function OtaUploadSection({ dealId }: OtaUploadSectionProps) {
     ERROR: { label: "Error", color: "text-red-600", icon: <AlertCircle className="w-4 h-4" /> },
   };
 
-  const isProcessing = isUploading || analyzeMutation.isPending;
+  const isProcessing = isUploading;
 
   return (
     <div className="space-y-4">
@@ -122,7 +136,7 @@ export function OtaUploadSection({ dealId }: OtaUploadSectionProps) {
           )}
           <div>
             <p className="text-sm font-medium text-gray-700">
-              {isUploading ? "Uploading..." : analyzeMutation.isPending ? "AI analyzing..." : "Upload Operations Transfer Agreement"}
+              {isUploading ? "Uploading..." : "Upload Operations Transfer Agreement"}
             </p>
             <p className="text-xs text-gray-400 mt-1">
               Drop a PDF here or click to browse. Max 50MB.
