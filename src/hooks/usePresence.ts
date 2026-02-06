@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { broadcastEvent } from "@/lib/realtime";
 
@@ -33,9 +33,13 @@ export function usePresence(dealId: string | null) {
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const statusRef = useRef<"ACTIVE" | "IDLE" | "OFFLINE">("ACTIVE");
+  const dealIdRef = useRef(dealId);
+  dealIdRef.current = dealId;
 
   // ── tRPC mutation for heartbeat ─────────────────────────────────────
   const updatePresence = trpc.chat.updatePresence.useMutation();
+  const mutateRef = useRef(updatePresence.mutate);
+  mutateRef.current = updatePresence.mutate;
 
   // ── tRPC query for presence list ────────────────────────────────────
   const { data: presenceData, refetch: refetchPresence } =
@@ -56,32 +60,29 @@ export function usePresence(dealId: string | null) {
     lastSeenAt: p.lastSeenAt?.toISOString?.() ?? String(p.lastSeenAt),
   }));
 
-  // ── Send heartbeat ──────────────────────────────────────────────────
-  const sendHeartbeat = useCallback(
-    (status: "ACTIVE" | "IDLE" | "OFFLINE") => {
-      if (!dealId) return;
-      statusRef.current = status;
-      setCurrentStatus(status);
-      updatePresence.mutate(
-        { dealId, status },
-        {
-          onSuccess: () => {
-            // Broadcast presence change to other tabs
-            broadcastEvent({
-              type: "presence-change",
-              userId: "", // server knows who we are
-              dealId,
-              action: status === "OFFLINE" ? "leave" : "join",
-            });
-          },
-        }
-      );
-    },
-    [dealId, updatePresence]
-  );
+  // ── Send heartbeat (stable — uses refs, no deps that change) ──────
+  const sendHeartbeat = useRef((status: "ACTIVE" | "IDLE" | "OFFLINE") => {
+    const id = dealIdRef.current;
+    if (!id) return;
+    statusRef.current = status;
+    setCurrentStatus(status);
+    mutateRef.current(
+      { dealId: id, status },
+      {
+        onSuccess: () => {
+          broadcastEvent({
+            type: "presence-change",
+            userId: "",
+            dealId: id,
+            action: status === "OFFLINE" ? "leave" : "join",
+          });
+        },
+      }
+    );
+  }).current;
 
   // ── Reset idle timer on user activity ───────────────────────────────
-  const resetIdle = useCallback(() => {
+  const resetIdle = useRef(() => {
     if (statusRef.current !== "ACTIVE") {
       sendHeartbeat("ACTIVE");
     }
@@ -89,7 +90,7 @@ export function usePresence(dealId: string | null) {
     idleTimerRef.current = setTimeout(() => {
       sendHeartbeat("IDLE");
     }, IDLE_TIMEOUT);
-  }, [sendHeartbeat]);
+  }).current;
 
   // ── Setup heartbeat + activity tracking ─────────────────────────────
   useEffect(() => {
@@ -113,12 +114,9 @@ export function usePresence(dealId: string | null) {
     events.forEach((evt) => window.addEventListener(evt, resetIdle));
 
     return () => {
-      // Cleanup
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
       events.forEach((evt) => window.removeEventListener(evt, resetIdle));
-
-      // Send offline on unmount (best-effort, won't work if tab closes)
       sendHeartbeat("OFFLINE");
     };
   }, [dealId, sendHeartbeat, resetIdle]);
@@ -126,7 +124,7 @@ export function usePresence(dealId: string | null) {
   // ── Handle tab visibility ───────────────────────────────────────────
   useEffect(() => {
     const handler = () => {
-      if (!dealId) return;
+      if (!dealIdRef.current) return;
       if (document.visibilityState === "visible") {
         sendHeartbeat("ACTIVE");
         refetchPresence();
@@ -137,7 +135,7 @@ export function usePresence(dealId: string | null) {
 
     document.addEventListener("visibilitychange", handler);
     return () => document.removeEventListener("visibilitychange", handler);
-  }, [dealId, sendHeartbeat, refetchPresence]);
+  }, [sendHeartbeat, refetchPresence]);
 
   return {
     onlineUsers,
