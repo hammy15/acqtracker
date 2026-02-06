@@ -147,7 +147,7 @@ export function TopNavbar() {
     <>
       <header
         className={cn(
-          "sticky top-0 z-50 h-16 w-full",
+          "sticky top-0 z-50 min-h-16 w-full safe-top",
           "bg-white/80 backdrop-blur-xl",
           "border-b transition-shadow duration-300",
           scrolled
