@@ -4,11 +4,10 @@ import { Building2, CheckSquare, AlertTriangle, Calendar, BarChart3, Layers } fr
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { ProgressBar } from "@/components/shared/ProgressBar";
 import { LiveIndicator } from "@/components/shared/LiveIndicator";
-import { PipelineFunnel, PipelineFunnelSkeleton } from "@/components/charts/PipelineFunnel";
-import { WorkstreamProgress, WorkstreamProgressSkeleton } from "@/components/charts/WorkstreamProgress";
+import { PipelineFunnel } from "@/components/charts/PipelineFunnel";
+import { WorkstreamProgress } from "@/components/charts/WorkstreamProgress";
 import { trpc } from "@/lib/trpc";
 import { useSession } from "next-auth/react";
-import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 
 const STATUS_COLOR_HEX: Record<string, string> = {
   PIPELINE: "#9ca3af",
@@ -110,36 +109,22 @@ function getGreeting(): string {
 const DEALS_INPUT = {};
 const TASKS_INPUT = {};
 
-const dealEventFilter = (e: { type: string }) => e.type === "deal-updated";
-const taskEventFilter = (e: { type: string }) =>
-  e.type === "task-updated" || e.type === "task-completed";
-
 export default function DashboardPage() {
   const { data: session } = useSession();
-  const dealsQuery = trpc.deals.list.useQuery(DEALS_INPUT);
-  const { data: dealsData, isLoading: dealsLoading } = dealsQuery;
+  const { data: dealsData, isLoading: dealsLoading } = trpc.deals.list.useQuery(DEALS_INPUT, {
+    refetchInterval: 30_000,
+  });
 
-  const tasksQuery = trpc.tasks.getMyTasks.useQuery(TASKS_INPUT);
-  const { data: tasksData, isLoading: tasksLoading } = tasksQuery;
+  const { data: tasksData, isLoading: tasksLoading } = trpc.tasks.getMyTasks.useQuery(TASKS_INPUT, {
+    refetchInterval: 30_000,
+  });
 
-  const statsQuery = trpc.deals.getStats.useQuery();
-  const { data: statsData, isLoading: statsLoading } = statsQuery;
+  const { data: statsData, isLoading: statsLoading } = trpc.deals.getStats.useQuery(undefined, {
+    refetchInterval: 30_000,
+  });
 
   const { data: pipelineData, isLoading: pipelineLoading } = trpc.reports.pipelineOverview.useQuery();
   const { data: workstreamData, isLoading: workstreamLoading } = trpc.reports.workstreamBreakdown.useQuery();
-
-  // Smart polling for dashboard critical data (10s interval)
-  useRealtimeQuery(dealsQuery, {
-    pollingInterval: 10_000,
-    eventFilter: dealEventFilter,
-  });
-  useRealtimeQuery(tasksQuery, {
-    pollingInterval: 10_000,
-    eventFilter: taskEventFilter,
-  });
-  useRealtimeQuery(statsQuery, {
-    pollingInterval: 10_000,
-  });
 
   const deals = dealsData?.deals ?? [];
   const tasks = tasksData ?? [];
