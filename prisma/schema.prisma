@@ -48,6 +48,8 @@ enum FacilityType {
 enum TaskStatus {
   NOT_STARTED
   IN_PROGRESS
+  UNDER_REVIEW
+  WAITING
   BLOCKED
   COMPLETE
   NA

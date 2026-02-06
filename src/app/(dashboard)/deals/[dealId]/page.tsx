@@ -16,6 +16,8 @@ import {
   ListChecks,
   Circle,
   Ban,
+  Eye,
+  Hourglass,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
@@ -39,19 +41,27 @@ const STATUS_OPTIONS = [
   },
   {
     value: "IN_PROGRESS",
-    label: "In Progress",
+    label: "Working",
     icon: <Clock className="w-3.5 h-3.5" />,
     iconColor: "text-teal-500",
     bg: "bg-teal-50",
     ring: "ring-teal-200",
   },
   {
-    value: "COMPLETE",
-    label: "Done",
-    icon: <Check className="w-3.5 h-3.5" />,
-    iconColor: "text-emerald-600",
-    bg: "bg-emerald-50",
-    ring: "ring-emerald-200",
+    value: "UNDER_REVIEW",
+    label: "Under Review",
+    icon: <Eye className="w-3.5 h-3.5" />,
+    iconColor: "text-violet-500",
+    bg: "bg-violet-50",
+    ring: "ring-violet-200",
+  },
+  {
+    value: "WAITING",
+    label: "Waiting",
+    icon: <Hourglass className="w-3.5 h-3.5" />,
+    iconColor: "text-amber-500",
+    bg: "bg-amber-50",
+    ring: "ring-amber-200",
   },
   {
     value: "BLOCKED",
@@ -60,6 +70,14 @@ const STATUS_OPTIONS = [
     iconColor: "text-red-500",
     bg: "bg-red-50",
     ring: "ring-red-200",
+  },
+  {
+    value: "COMPLETE",
+    label: "Done",
+    icon: <Check className="w-3.5 h-3.5" />,
+    iconColor: "text-emerald-600",
+    bg: "bg-emerald-50",
+    ring: "ring-emerald-200",
   },
   {
     value: "NA",
@@ -126,7 +144,7 @@ function StatusDropdown({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-50 w-40 rounded-xl bg-white border border-gray-200 shadow-lg shadow-black/5 py-1 animate-scale-in">
+        <div className="absolute left-0 top-full mt-1 z-50 w-44 rounded-xl bg-white border border-gray-200 shadow-lg shadow-black/5 py-1 animate-scale-in">
           {STATUS_OPTIONS.map((opt) => (
             <button
               key={opt.value}
@@ -170,9 +188,11 @@ const phases = [
 const filterStatuses = [
   { value: "", label: "All Status" },
   { value: "NOT_STARTED", label: "Not Started" },
-  { value: "IN_PROGRESS", label: "In Progress" },
+  { value: "IN_PROGRESS", label: "Working" },
+  { value: "UNDER_REVIEW", label: "Under Review" },
+  { value: "WAITING", label: "Waiting" },
   { value: "BLOCKED", label: "Blocked" },
-  { value: "COMPLETE", label: "Complete" },
+  { value: "COMPLETE", label: "Done" },
   { value: "NA", label: "N/A" },
 ];
 
@@ -310,6 +330,8 @@ export default function ChecklistPage() {
   const completedTasks = tasks?.filter((t) => t.status === "COMPLETE" || t.status === "NA").length ?? 0;
   const blockedTasks = tasks?.filter((t) => t.status === "BLOCKED").length ?? 0;
   const inProgressTasks = tasks?.filter((t) => t.status === "IN_PROGRESS").length ?? 0;
+  const underReviewTasks = tasks?.filter((t) => t.status === "UNDER_REVIEW").length ?? 0;
+  const waitingTasks = tasks?.filter((t) => t.status === "WAITING").length ?? 0;
 
   return (
     <div className="space-y-4">
@@ -326,7 +348,19 @@ export default function ChecklistPage() {
         {inProgressTasks > 0 && (
           <span className="flex items-center gap-1.5 text-teal-600">
             <Clock className="w-3.5 h-3.5" />
-            {inProgressTasks} in progress
+            {inProgressTasks} working
+          </span>
+        )}
+        {underReviewTasks > 0 && (
+          <span className="flex items-center gap-1.5 text-violet-600">
+            <Eye className="w-3.5 h-3.5" />
+            {underReviewTasks} under review
+          </span>
+        )}
+        {waitingTasks > 0 && (
+          <span className="flex items-center gap-1.5 text-amber-600">
+            <Hourglass className="w-3.5 h-3.5" />
+            {waitingTasks} waiting
           </span>
         )}
         {blockedTasks > 0 && (

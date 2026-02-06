@@ -168,7 +168,7 @@ export const tasksRouter = router({
     .input(
       z.object({
         id: z.string(),
-        status: z.enum(["NOT_STARTED", "IN_PROGRESS", "BLOCKED", "COMPLETE", "NA"]),
+        status: z.enum(["NOT_STARTED", "IN_PROGRESS", "UNDER_REVIEW", "WAITING", "BLOCKED", "COMPLETE", "NA"]),
         flagReason: z.string().optional(),
       })
     )
@@ -368,7 +368,7 @@ export const tasksRouter = router({
     .input(
       z.object({
         taskIds: z.array(z.string()).min(1),
-        status: z.enum(["NOT_STARTED", "IN_PROGRESS", "BLOCKED", "COMPLETE", "NA"]),
+        status: z.enum(["NOT_STARTED", "IN_PROGRESS", "UNDER_REVIEW", "WAITING", "BLOCKED", "COMPLETE", "NA"]),
       })
     )
     .mutation(async ({ ctx, input }) => {
