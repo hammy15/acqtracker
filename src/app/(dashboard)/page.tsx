@@ -190,7 +190,7 @@ export default function DashboardPage() {
       {/* Greeting */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-gray-900" suppressHydrationWarning>
             {getGreeting()}, {firstName}.
           </h1>
           <p className="text-gray-500 mt-1">
