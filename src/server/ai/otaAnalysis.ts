@@ -1,4 +1,5 @@
 import { anthropic } from "./anthropic";
+import { jsonrepair } from "jsonrepair";
 
 // ============================================================================
 // OTA Analysis Types
@@ -104,8 +105,9 @@ export async function analyzeOta(
       jsonText = jsonText.slice(first, last + 1);
     }
 
-    // Fix trailing commas
-    jsonText = jsonText.replace(/,\s*([}\]])/g, "$1");
+    // Use jsonrepair to fix common LLM JSON issues (missing commas,
+    // trailing commas, unquoted keys, etc.)
+    jsonText = jsonrepair(jsonText);
 
     const parsed = JSON.parse(jsonText) as Omit<
       OtaAnalysisResult,
