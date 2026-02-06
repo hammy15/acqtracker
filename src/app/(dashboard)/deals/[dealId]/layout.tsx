@@ -9,7 +9,7 @@ import {
   MessageCircle,
   Calendar,
   FileText,
-  MapPin,
+
   Activity,
   Zap,
   Settings,
@@ -27,7 +27,7 @@ const tabs = [
   { id: "chat", label: "Chat", icon: MessageCircle, href: "/chat" },
   { id: "timeline", label: "Timeline", icon: Calendar, href: "/timeline" },
   { id: "documents", label: "Documents", icon: FileText, href: "/documents" },
-  { id: "state-reqs", label: "State Reqs", icon: MapPin, href: "/state-reqs" },
+
   { id: "activity", label: "Activity", icon: Activity, href: "/activity" },
   { id: "transition", label: "Transition", icon: Zap, href: "/transition" },
   { id: "settings", label: "Settings", icon: Settings, href: "/settings" },
