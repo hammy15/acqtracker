@@ -90,7 +90,8 @@ const navItems: {
 export function TopNavbar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const { can, isAdmin } = usePermissions();
+  const { can, isAdmin, role } = usePermissions();
+  const isGodMode = role === "SUPER_ADMIN";
   const { mobileNavOpen, setMobileNavOpen } = useUIStore();
   const [searchFocused, setSearchFocused] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -277,30 +278,51 @@ export function TopNavbar() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 rounded-lg p-1 transition-colors hover:bg-gray-100">
-                  <Avatar className="h-7 w-7">
-                    <AvatarFallback
-                      className={cn(
-                        "bg-gradient-to-br from-teal-500 to-teal-600",
-                        "text-[10px] font-semibold text-white"
-                      )}
-                    >
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="hidden max-w-[100px] truncate text-[13px] font-medium text-gray-700 md:block">
+                  <div className="relative">
+                    <Avatar className="h-7 w-7">
+                      <AvatarFallback
+                        className={cn(
+                          "text-[10px] font-semibold text-white",
+                          isGodMode
+                            ? "bg-gradient-to-br from-amber-500 to-orange-600"
+                            : "bg-gradient-to-br from-teal-500 to-teal-600"
+                        )}
+                      >
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    {isGodMode && (
+                      <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-amber-400 text-[6px] font-black text-amber-900 ring-2 ring-white">
+                        &#x26A1;
+                      </span>
+                    )}
+                  </div>
+                  <span className="hidden max-w-[120px] truncate text-[13px] font-medium text-gray-700 md:block">
                     {user?.name ?? "User"}
                   </span>
+                  {isGodMode && (
+                    <span className="hidden md:inline-flex items-center rounded-full bg-gradient-to-r from-amber-100 to-orange-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-700 ring-1 ring-amber-200/60">
+                      God
+                    </span>
+                  )}
                   <ChevronDown className="hidden h-3 w-3 text-gray-400 md:block" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
                 {/* User info header */}
                 <div className="px-2 py-2.5">
-                  <p className="text-sm font-medium text-gray-900">
-                    {user?.name ?? "User"}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-medium text-gray-900">
+                      {user?.name ?? "User"}
+                    </p>
+                    {isGodMode && (
+                      <span className="inline-flex items-center rounded-full bg-gradient-to-r from-amber-100 to-orange-100 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-amber-700 ring-1 ring-amber-200/60">
+                        God Mode
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-gray-500 truncate">
-                    {user?.email ?? ""}
+                    {isGodMode ? "Super Admin" : user?.email ?? ""}
                   </p>
                 </div>
                 <DropdownMenuSeparator />

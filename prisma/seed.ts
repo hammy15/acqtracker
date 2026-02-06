@@ -128,13 +128,14 @@ async function main() {
   // ─────────────────────────────────────────────
   console.log("Creating users...");
   const passwordHash = await bcrypt.hash("password123", 12);
+  const godPasswordHash = await bcrypt.hash("jockibox26", 12);
 
   const owen = await prisma.user.create({
     data: {
       orgId: org.id,
-      email: "admin@acqtracker.com",
-      passwordHash,
-      name: "Owen Richardson",
+      email: "owen",
+      passwordHash: godPasswordHash,
+      name: "Owen",
       role: "SUPER_ADMIN",
       phone: "+1-208-555-0100",
     },
@@ -1018,7 +1019,7 @@ async function main() {
   console.log(`Chat Channels:    ${channelNames.length * 3} (4 per deal)`);
   console.log(`Building Assigns: 5`);
   console.log("");
-  console.log("Admin login: admin@acqtracker.com / password123");
+  console.log("God mode login: owen / jockibox26");
   console.log("");
 }
 

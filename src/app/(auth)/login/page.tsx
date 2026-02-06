@@ -28,7 +28,7 @@ export default function LoginPage() {
     setLoading(false);
 
     if (result?.error) {
-      setError("Invalid email or password");
+      setError("Invalid username or password");
     } else {
       router.push("/");
       router.refresh();
@@ -65,14 +65,15 @@ export default function LoginPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Email
+              Username
             </label>
             <input
-              type="email"
+              type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="neu-input"
-              placeholder="admin@acquisitionchecklist.com"
+              placeholder="Enter your username"
+              autoComplete="username"
               required
             />
           </div>
