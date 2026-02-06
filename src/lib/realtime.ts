@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useRef } from "react";
 
 // ---------------------------------------------------------------------------
 // Realtime event types for cross-tab communication
@@ -47,19 +47,20 @@ export function broadcastEvent(event: RealtimeEvent) {
 // ---------------------------------------------------------------------------
 
 export function useRealtimeEvents(callback: (event: RealtimeEvent) => void) {
-  const stableCallback = useCallback(callback, [callback]);
+  const callbackRef = useRef(callback);
+  callbackRef.current = callback;
 
   useEffect(() => {
     const ch = getChannel();
     if (!ch) return;
 
     const handler = (e: MessageEvent<RealtimeEvent>) => {
-      stableCallback(e.data);
+      callbackRef.current(e.data);
     };
 
     ch.addEventListener("message", handler);
     return () => ch.removeEventListener("message", handler);
-  }, [stableCallback]);
+  }, []);
 }
 
 // ---------------------------------------------------------------------------

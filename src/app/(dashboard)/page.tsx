@@ -107,12 +107,19 @@ function getGreeting(): string {
   return "Good evening";
 }
 
+const DEALS_INPUT = {};
+const TASKS_INPUT = {};
+
+const dealEventFilter = (e: { type: string }) => e.type === "deal-updated";
+const taskEventFilter = (e: { type: string }) =>
+  e.type === "task-updated" || e.type === "task-completed";
+
 export default function DashboardPage() {
   const { data: session } = useSession();
-  const dealsQuery = trpc.deals.list.useQuery({ status: undefined });
+  const dealsQuery = trpc.deals.list.useQuery(DEALS_INPUT);
   const { data: dealsData, isLoading: dealsLoading } = dealsQuery;
 
-  const tasksQuery = trpc.tasks.getMyTasks.useQuery({});
+  const tasksQuery = trpc.tasks.getMyTasks.useQuery(TASKS_INPUT);
   const { data: tasksData, isLoading: tasksLoading } = tasksQuery;
 
   const statsQuery = trpc.deals.getStats.useQuery();
@@ -124,11 +131,11 @@ export default function DashboardPage() {
   // Smart polling for dashboard critical data (10s interval)
   useRealtimeQuery(dealsQuery, {
     pollingInterval: 10_000,
-    eventFilter: (e) => e.type === "deal-updated",
+    eventFilter: dealEventFilter,
   });
   useRealtimeQuery(tasksQuery, {
     pollingInterval: 10_000,
-    eventFilter: (e) => e.type === "task-updated" || e.type === "task-completed",
+    eventFilter: taskEventFilter,
   });
   useRealtimeQuery(statsQuery, {
     pollingInterval: 10_000,
