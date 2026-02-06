@@ -210,6 +210,34 @@ export const usersRouter = router({
       return updated;
     }),
 
+  registerPushToken: protectedProcedure
+    .input(
+      z.object({
+        token: z.string().min(1),
+        platform: z.enum(["ios", "android", "web"]),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { user } = ctx.session;
+
+      // NOTE: The Prisma User model does not have pushToken / pushPlatform
+      // columns yet. For now we log the token so it can be verified during
+      // development. When the schema is updated, replace the console.log
+      // below with a db.user.update call:
+      //
+      //   await db.user.update({
+      //     where: { id: user.id },
+      //     data: { pushToken: input.token, pushPlatform: input.platform },
+      //   });
+
+      console.log(
+        `[PushNotifications] Token registered for user ${user.id} (${user.email}):`,
+        { token: input.token, platform: input.platform },
+      );
+
+      return { success: true };
+    }),
+
   getTeamForDeal: protectedProcedure
     .input(z.object({ dealId: z.string() }))
     .query(async ({ ctx, input }) => {
