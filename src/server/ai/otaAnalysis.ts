@@ -57,6 +57,187 @@ interface OperationalItem {
 }
 
 // ============================================================================
+// Tool definition for structured output (guarantees valid JSON)
+// ============================================================================
+
+const SECTION_ITEM = {
+  type: "object" as const,
+  properties: {
+    title: { type: "string" as const, description: "Title of this item" },
+    detail: { type: "string" as const, description: "Detailed description" },
+  },
+  required: ["title", "detail"],
+};
+
+const OTA_ANALYSIS_TOOL = {
+  name: "submit_ota_analysis",
+  description:
+    "Submit the structured OTA analysis results after reviewing the document.",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      summary: {
+        type: "string" as const,
+        description:
+          "Executive summary of the OTA's key terms in 3-5 bullet points using bullet character \u2022",
+      },
+      sections: {
+        type: "object" as const,
+        properties: {
+          staffing: {
+            type: "array" as const,
+            items: SECTION_ITEM,
+            description:
+              "Employee retention, benefits, key personnel, unions, staffing ratios",
+          },
+          financial: {
+            type: "array" as const,
+            items: SECTION_ITEM,
+            description:
+              "Purchase price, working capital, AR/AP, escrow, indemnification",
+          },
+          regulatory: {
+            type: "array" as const,
+            items: SECTION_ITEM,
+            description:
+              "License transfers, CHOW, Medicare/Medicaid, survey compliance",
+          },
+          operations: {
+            type: "array" as const,
+            items: SECTION_ITEM,
+            description:
+              "Day-of-close, vendor contracts, IT, medical records, notifications",
+          },
+          timeline: {
+            type: "array" as const,
+            items: SECTION_ITEM,
+            description:
+              "Key dates, milestones, closing conditions, cure periods",
+          },
+          legal: {
+            type: "array" as const,
+            items: SECTION_ITEM,
+            description:
+              "Representations, indemnification, disputes, governing law, termination",
+          },
+        },
+        required: [
+          "staffing",
+          "financial",
+          "regulatory",
+          "operations",
+          "timeline",
+          "legal",
+        ],
+      },
+      risks: {
+        type: "array" as const,
+        items: {
+          type: "object" as const,
+          properties: {
+            title: { type: "string" as const },
+            severity: {
+              type: "string" as const,
+              enum: ["low", "medium", "high", "critical"],
+            },
+            description: { type: "string" as const },
+            recommendation: { type: "string" as const },
+          },
+          required: ["title", "severity", "description", "recommendation"],
+        },
+        description: "Identified risks with severity and recommendations",
+      },
+      compliance: {
+        type: "array" as const,
+        items: {
+          type: "object" as const,
+          properties: {
+            regulation: {
+              type: "string" as const,
+              description: "Specific regulation (42 CFR, CMS, state, etc.)",
+            },
+            concern: { type: "string" as const },
+            severity: {
+              type: "string" as const,
+              enum: ["low", "medium", "high", "critical"],
+            },
+          },
+          required: ["regulation", "concern", "severity"],
+        },
+        description: "Regulatory compliance concerns",
+      },
+      agreedVsOpen: {
+        type: "object" as const,
+        properties: {
+          agreed: {
+            type: "array" as const,
+            items: {
+              type: "object" as const,
+              properties: {
+                item: { type: "string" as const },
+                detail: { type: "string" as const },
+                reference: { type: "string" as const },
+              },
+              required: ["item", "detail"],
+            },
+            description: "Items with definitive, agreed-upon language",
+          },
+          notAgreed: {
+            type: "array" as const,
+            items: {
+              type: "object" as const,
+              properties: {
+                item: { type: "string" as const },
+                detail: { type: "string" as const },
+                reference: { type: "string" as const },
+              },
+              required: ["item", "detail"],
+            },
+            description: "Items missing or unresolved",
+          },
+          ambiguous: {
+            type: "array" as const,
+            items: {
+              type: "object" as const,
+              properties: {
+                item: { type: "string" as const },
+                detail: { type: "string" as const },
+                reference: { type: "string" as const },
+              },
+              required: ["item", "detail"],
+            },
+            description: "Items with ambiguous language",
+          },
+        },
+        required: ["agreed", "notAgreed", "ambiguous"],
+      },
+      operationalImpact: {
+        type: "array" as const,
+        items: {
+          type: "object" as const,
+          properties: {
+            area: { type: "string" as const },
+            term: { type: "string" as const },
+            impact: { type: "string" as const },
+            actionRequired: { type: "string" as const },
+          },
+          required: ["area", "term", "impact", "actionRequired"],
+        },
+        description: "Operational impact items with action required",
+      },
+    },
+    required: [
+      "summary",
+      "sections",
+      "risks",
+      "compliance",
+      "agreedVsOpen",
+      "operationalImpact",
+    ],
+  },
+};
+
+// ============================================================================
 // OTA Analysis Function
 // ============================================================================
 
@@ -64,27 +245,7 @@ const SYSTEM_PROMPT = `You are a healthcare acquisition analyst specializing in 
 
 You are analyzing an OTA document that governs the transfer of operations during a healthcare facility acquisition. Your job is to extract, categorize, and assess every significant term, obligation, and risk in the agreement.
 
-You MUST return a valid JSON object with the following structure (no markdown, no code fences, just raw JSON):
-
-{
-  "summary": "A concise executive summary of the OTA's key terms in 3-5 bullet points, using bullet character \u2022",
-  "sections": {
-    "staffing": [{"title": "...", "detail": "..."}],
-    "financial": [{"title": "...", "detail": "..."}],
-    "regulatory": [{"title": "...", "detail": "..."}],
-    "operations": [{"title": "...", "detail": "..."}],
-    "timeline": [{"title": "...", "detail": "..."}],
-    "legal": [{"title": "...", "detail": "..."}]
-  },
-  "risks": [{"title": "...", "severity": "low|medium|high|critical", "description": "...", "recommendation": "..."}],
-  "compliance": [{"regulation": "...", "concern": "...", "severity": "low|medium|high|critical"}],
-  "agreedVsOpen": {
-    "agreed": [{"item": "...", "detail": "...", "reference": "Section X.X"}],
-    "notAgreed": [{"item": "...", "detail": "...", "reference": "Section X.X"}],
-    "ambiguous": [{"item": "...", "detail": "...", "reference": "Section X.X"}]
-  },
-  "operationalImpact": [{"area": "...", "term": "...", "impact": "...", "actionRequired": "..."}]
-}
+Use the submit_ota_analysis tool to return your structured analysis.
 
 Guidelines:
 - **Staffing**: Employee retention, benefits continuation, key personnel, union obligations, staffing ratios, training requirements
@@ -105,8 +266,10 @@ export async function analyzeOta(
   try {
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-5-20250929",
-      max_tokens: 8192,
+      max_tokens: 16384,
       system: SYSTEM_PROMPT,
+      tools: [OTA_ANALYSIS_TOOL],
+      tool_choice: { type: "tool", name: "submit_ota_analysis" },
       messages: [
         {
           role: "user",
@@ -115,45 +278,15 @@ export async function analyzeOta(
       ],
     });
 
-    // Extract text content from the response
-    const textBlock = response.content.find((block) => block.type === "text");
-    if (!textBlock || textBlock.type !== "text") {
-      throw new Error(
-        "No text content returned from Claude analysis response.",
-      );
+    // Extract tool_use block - guaranteed valid JSON
+    const toolBlock = response.content.find(
+      (block) => block.type === "tool_use",
+    );
+    if (!toolBlock || toolBlock.type !== "tool_use") {
+      throw new Error("No tool_use block returned from Claude analysis.");
     }
 
-    // Parse the JSON response - strip any markdown code fences if present
-    let jsonText = textBlock.text.trim();
-    if (jsonText.startsWith("```")) {
-      jsonText = jsonText.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-    }
-
-    // Extract JSON object between first { and last }
-    const firstBrace = jsonText.indexOf("{");
-    const lastBrace = jsonText.lastIndexOf("}");
-    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-      jsonText = jsonText.slice(firstBrace, lastBrace + 1);
-    }
-
-    // Fix common JSON issues: trailing commas before } or ]
-    jsonText = jsonText.replace(/,\s*([}\]])/g, "$1");
-
-    let parsed: Omit<OtaAnalysisResult, "tokensUsed">;
-    try {
-      parsed = JSON.parse(jsonText);
-    } catch (firstError) {
-      // If initial parse fails, try more aggressive cleaning
-      // Remove single-line comments
-      jsonText = jsonText.replace(/\/\/[^\n]*/g, "");
-      // Remove multi-line comments
-      jsonText = jsonText.replace(/\/\*[\s\S]*?\*\//g, "");
-      // Fix trailing commas again after comment removal
-      jsonText = jsonText.replace(/,\s*([}\]])/g, "$1");
-      parsed = JSON.parse(jsonText);
-    }
-
-    // Calculate tokens used
+    const parsed = toolBlock.input as Omit<OtaAnalysisResult, "tokensUsed">;
     const tokensUsed =
       response.usage.input_tokens + response.usage.output_tokens;
 
@@ -162,11 +295,6 @@ export async function analyzeOta(
       tokensUsed,
     };
   } catch (error) {
-    if (error instanceof SyntaxError) {
-      throw new Error(
-        `Failed to parse OTA analysis response as JSON: ${error.message}`,
-      );
-    }
     if (error instanceof Error) {
       throw new Error(`OTA analysis failed: ${error.message}`);
     }
