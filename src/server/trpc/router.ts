@@ -10,7 +10,6 @@ import { buildingsRouter } from "./routers/buildings";
 import { archiveRouter } from "./routers/archive";
 import { activityRouter } from "./routers/activity";
 import { reportsRouter } from "./routers/reports";
-import { stateReqsRouter } from "./routers/stateReqs";
 import { otaRouter } from "./routers/ota";
 import { aiRouter } from "./routers/ai";
 import { orgSettingsRouter } from "./routers/orgSettings";
@@ -27,7 +26,6 @@ export const appRouter = router({
   archive: archiveRouter,
   activity: activityRouter,
   reports: reportsRouter,
-  stateReqs: stateReqsRouter,
   ota: otaRouter,
   ai: aiRouter,
   orgSettings: orgSettingsRouter,

@@ -40,7 +40,6 @@ async function main() {
   await prisma.deal.deleteMany();
   await prisma.templateTask.deleteMany();
   await prisma.template.deleteMany();
-  await prisma.stateRequirement.deleteMany();
   await prisma.user.deleteMany();
   await prisma.region.deleteMany();
   await prisma.orgSettings.deleteMany();
@@ -66,7 +65,6 @@ async function main() {
           chat: true,
           feed: true,
           transitionDay: true,
-          stateRequirements: true,
           dueDiligenceDocs: true,
           otaAnalysis: true,
           aiAssistant: true,
@@ -1183,112 +1181,6 @@ async function main() {
   }
 
   // ─────────────────────────────────────────────
-  // 12. STATE REQUIREMENTS (8 states)
-  // ─────────────────────────────────────────────
-  console.log("Creating state requirements…");
-
-  const stateReqs = [
-    {
-      stateCode: "ID", facilityType: "SNF" as const,
-      licensingBody: "Idaho Department of Health & Welfare",
-      licensingBodyUrl: "https://healthandwelfare.idaho.gov",
-      suretyBondRequired: true, suretyBondAmount: 50000, conRequired: false,
-      backgroundCheckRequired: true, processingTimelineDays: 90,
-      requirementsChecklist: {
-        items: ["Completed CHOW application", "Administrator license verification", "Surety bond ($50,000)", "Background check results", "Fire inspection certificate", "Financial statements (3 years)"],
-      },
-    },
-    {
-      stateCode: "OR", facilityType: "SNF" as const,
-      licensingBody: "Oregon Health Authority",
-      licensingBodyUrl: "https://www.oregon.gov/oha",
-      suretyBondRequired: false, conRequired: true,
-      backgroundCheckRequired: true, processingTimelineDays: 120,
-      requirementsChecklist: {
-        items: ["Completed CHOW application", "Certificate of Need application", "Administrator license verification", "Background check results", "Financial review documentation", "Staffing plan"],
-      },
-    },
-    {
-      stateCode: "OR", facilityType: "ALF" as const,
-      licensingBody: "Oregon Health Authority — Long Term Care Licensing",
-      licensingBodyUrl: "https://www.oregon.gov/oha",
-      suretyBondRequired: false, conRequired: false,
-      backgroundCheckRequired: true, processingTimelineDays: 90,
-      requirementsChecklist: {
-        items: ["CHOW application", "Administrator certification", "Background checks (all staff)", "Financial viability documentation", "Emergency preparedness plan"],
-      },
-    },
-    {
-      stateCode: "WA", facilityType: "SNF" as const,
-      licensingBody: "Washington State Department of Health",
-      licensingBodyUrl: "https://www.doh.wa.gov",
-      suretyBondRequired: true, suretyBondAmount: 25000, conRequired: true,
-      backgroundCheckRequired: true, processingTimelineDays: 90,
-      requirementsChecklist: {
-        items: ["Completed CHOW application", "Certificate of Need review", "Surety bond ($25,000)", "Background check results", "Administrator credentials", "Financial feasibility study"],
-      },
-    },
-    {
-      stateCode: "CA", facilityType: "SNF" as const,
-      licensingBody: "California Department of Public Health",
-      licensingBodyUrl: "https://www.cdph.ca.gov",
-      suretyBondRequired: false, conRequired: true,
-      backgroundCheckRequired: true, processingTimelineDays: 180,
-      requirementsChecklist: {
-        items: ["Completed CHOW application", "Certificate of Need application", "Administrator license verification", "DOJ/FBI background checks", "Financial statements (5 years)", "Staffing plan and ratios", "Quality assurance plan", "Emergency preparedness plan"],
-      },
-    },
-    {
-      stateCode: "MT", facilityType: "SNF" as const,
-      licensingBody: "Montana Department of Public Health and Human Services",
-      licensingBodyUrl: "https://dphhs.mt.gov",
-      suretyBondRequired: false, conRequired: false,
-      backgroundCheckRequired: true, processingTimelineDays: 60,
-      requirementsChecklist: {
-        items: ["CHOW application", "Administrator license", "Background check results", "Financial documentation", "Fire safety inspection"],
-      },
-    },
-    {
-      stateCode: "AZ", facilityType: "ALF" as const,
-      licensingBody: "Arizona Department of Health Services",
-      licensingBodyUrl: "https://www.azdhs.gov",
-      suretyBondRequired: false, conRequired: false,
-      backgroundCheckRequired: true, processingTimelineDays: 45,
-      requirementsChecklist: {
-        items: ["Change of ownership application", "Manager qualifications", "Background check results", "Facility inspection", "Financial viability documentation"],
-      },
-    },
-    {
-      stateCode: "NV", facilityType: "SNF" as const,
-      licensingBody: "Nevada Division of Public and Behavioral Health",
-      licensingBodyUrl: "https://dpbh.nv.gov",
-      suretyBondRequired: true, suretyBondAmount: 30000, conRequired: false,
-      backgroundCheckRequired: true, processingTimelineDays: 75,
-      requirementsChecklist: {
-        items: ["CHOW application", "Surety bond ($30,000)", "Administrator credentials", "Background checks", "Financial review", "Staffing plan"],
-      },
-    },
-  ];
-
-  for (const req of stateReqs) {
-    await prisma.stateRequirement.create({
-      data: {
-        orgId: org.id,
-        stateCode: req.stateCode,
-        facilityType: req.facilityType,
-        licensingBody: req.licensingBody,
-        licensingBodyUrl: req.licensingBodyUrl,
-        suretyBondRequired: req.suretyBondRequired,
-        suretyBondAmount: req.suretyBondAmount ?? null,
-        conRequired: req.conRequired,
-        backgroundCheckRequired: req.backgroundCheckRequired,
-        processingTimelineDays: req.processingTimelineDays,
-        requirementsChecklist: req.requirementsChecklist,
-      },
-    });
-  }
-
-  // ─────────────────────────────────────────────
   // SUMMARY
   // ─────────────────────────────────────────────
   console.log("\n━━━ Seed Complete ━━━");
@@ -1306,7 +1198,6 @@ async function main() {
   console.log(`  ├─ Transition Day: Maple Grove SNF (live)`);
   console.log(`  ├─ Week 1:         Valley View ILF`);
   console.log(`  └─ Post-Close:     Cascade Heights SNF`);
-  console.log(`State Reqs:       ${stateReqs.length} (ID, OR×2, WA, CA, MT, AZ, NV)`);
   console.log(`DD Docs:          ${ddDocs.length} (Cedar Ridge)`);
   console.log("");
   console.log("God mode login: owen / jockibox26");

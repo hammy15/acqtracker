@@ -10,7 +10,6 @@ import {
   LayoutDashboard,
   Building2,
   FileStack,
-  MapPin,
   Users,
   BarChart3,
   Archive,
@@ -39,12 +38,6 @@ const navItems: {
     label: "Templates",
     icon: FileStack,
     permission: "templates:read",
-  },
-  {
-    href: "/state-requirements",
-    label: "State Reqs",
-    icon: MapPin,
-    permission: "state-reqs:read",
   },
   {
     href: "/users",

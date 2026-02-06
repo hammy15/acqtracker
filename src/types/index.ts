@@ -256,32 +256,6 @@ export interface TemplateTaskRecord {
 }
 
 // ============================================================================
-// State Requirement Types
-// ============================================================================
-
-export interface StateRequirementRecord {
-  id: string;
-  orgId: string;
-  stateCode: string;
-  facilityType: string;
-  licensingBody: string | null;
-  licensingBodyUrl: string | null;
-  contactInfo: Record<string, unknown> | null;
-  chowFormUrl: string | null;
-  requirementsChecklist: Record<string, unknown> | null;
-  notificationsRequired: Record<string, unknown> | null;
-  suretyBondRequired: boolean;
-  suretyBondAmount: Decimal | null;
-  conRequired: boolean;
-  backgroundCheckRequired: boolean;
-  processingTimelineDays: number | null;
-  adminLicenseReqs: string | null;
-  notes: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// ============================================================================
 // Due Diligence Types
 // ============================================================================
 
