@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { after } from "next/server";
 import { auth } from "@/server/auth";
 import { db } from "@/server/db";
 import { hasPermission, canAccessDeal } from "@/server/permissions";
@@ -42,48 +41,54 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No extracted text" }, { status: 400 });
     }
 
-    // Set status to ANALYZING immediately
+    // Set status to ANALYZING
     await db.otaDocument.update({
       where: { id: otaDocumentId },
       data: { status: "ANALYZING" },
     });
 
-    // Schedule the actual analysis to run AFTER the response is sent
-    after(async () => {
-      try {
-        const result = await analyzeOta(document.extractedText!);
+    // Run analysis inline - maxDuration=300 keeps the function alive on Vercel
+    // even after the gateway returns 504 to the client (~60s).
+    // The frontend fires-and-forgets so it doesn't wait for this response.
+    try {
+      const result = await analyzeOta(document.extractedText!);
 
-        await db.otaAnalysis.create({
-          data: {
-            otaDocumentId,
-            summary: result.summary,
-            sections: result.sections as any,
-            risks: result.risks as any,
-            compliance: result.compliance as any,
-            agreedVsOpen: result.agreedVsOpen as any,
-            operationalImpact: result.operationalImpact as any,
-            tokensUsed: result.tokensUsed,
-          },
-        });
+      await db.otaAnalysis.create({
+        data: {
+          otaDocumentId,
+          summary: result.summary,
+          sections: result.sections as any,
+          risks: result.risks as any,
+          compliance: result.compliance as any,
+          agreedVsOpen: result.agreedVsOpen as any,
+          operationalImpact: result.operationalImpact as any,
+          tokensUsed: result.tokensUsed,
+        },
+      });
 
-        await db.otaDocument.update({
-          where: { id: otaDocumentId },
-          data: { status: "COMPLETE" },
-        });
-      } catch (error) {
-        console.error("[OTA Analysis Error]", error);
-        await db.otaDocument.update({
-          where: { id: otaDocumentId },
-          data: {
-            status: "ERROR",
-            errorMessage: error instanceof Error ? error.message : "Analysis failed",
-          },
-        });
-      }
-    });
+      await db.otaDocument.update({
+        where: { id: otaDocumentId },
+        data: { status: "COMPLETE" },
+      });
 
-    // Return immediately - analysis runs in the background
-    return NextResponse.json({ status: "started" });
+      return NextResponse.json({ status: "complete" });
+    } catch (analysisError) {
+      console.error("[OTA Analysis Error]", analysisError);
+      await db.otaDocument.update({
+        where: { id: otaDocumentId },
+        data: {
+          status: "ERROR",
+          errorMessage:
+            analysisError instanceof Error
+              ? analysisError.message
+              : "Analysis failed",
+        },
+      });
+      return NextResponse.json(
+        { error: "Analysis failed" },
+        { status: 500 },
+      );
+    }
   } catch (error) {
     console.error("[OTA Analyze Route Error]", error);
     return NextResponse.json(
