@@ -71,14 +71,23 @@ export async function analyzeOta(
   extractedText: string,
 ): Promise<OtaAnalysisResult> {
   try {
+    // Cap input at ~15K chars to stay within Vercel's 60s function timeout.
+    // Haiku processes ~4K chars in ~22s; 15K keeps us safely under 60s.
+    const maxChars = 15000;
+    const truncated =
+      extractedText.length > maxChars
+        ? extractedText.slice(0, maxChars) +
+          "\n\n[Document truncated for analysis]"
+        : extractedText;
+
     const response = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 8192,
+      max_tokens: 4096,
       system: SYSTEM_PROMPT,
       messages: [
         {
           role: "user",
-          content: `Analyze this OTA:\n\n${extractedText}`,
+          content: `Analyze this OTA:\n\n${truncated}`,
         },
       ],
     });
