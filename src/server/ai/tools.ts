@@ -103,6 +103,16 @@ export const aiTools: Tool[] = [
       required: ["deal_ids"],
     },
   },
+  {
+    name: "list_all_deals",
+    description:
+      "List all active deals in the organization with their key info. Use this when you need to identify which deal the user is referring to, or to show them a list of available deals.",
+    input_schema: {
+      type: "object" as const,
+      properties: {},
+      required: [],
+    },
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -564,6 +574,38 @@ async function compareDeals(dealIds: string[], orgId: string) {
   };
 }
 
+async function listAllDeals(orgId: string) {
+  const deals = await db.deal.findMany({
+    where: { orgId, status: { not: "ARCHIVED" } },
+    include: {
+      dealLead: { select: { name: true } },
+      tasks: { select: { status: true } },
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  return {
+    totalDeals: deals.length,
+    deals: deals.map((deal) => {
+      const total = deal.tasks.length;
+      const completed = deal.tasks.filter((t) => t.status === "COMPLETE").length;
+      return {
+        id: deal.id,
+        name: deal.name,
+        facilityName: deal.facilityName,
+        facilityType: deal.facilityType,
+        state: deal.state,
+        city: deal.city,
+        status: deal.status,
+        dealLead: deal.dealLead?.name ?? "Unassigned",
+        bedCount: deal.bedCount,
+        targetCloseDate: deal.targetCloseDate?.toISOString().split("T")[0] ?? null,
+        taskProgress: `${completed}/${total} (${total > 0 ? Math.round((completed / total) * 100) : 0}%)`,
+      };
+    }),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Dispatcher
 // ---------------------------------------------------------------------------
@@ -609,6 +651,10 @@ export async function handleToolCall(
           toolInput.deal_ids as string[],
           orgId
         );
+        break;
+
+      case "list_all_deals":
+        result = await listAllDeals(orgId);
         break;
 
       default:

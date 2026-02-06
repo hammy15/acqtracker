@@ -13,6 +13,7 @@ import { reportsRouter } from "./routers/reports";
 import { stateReqsRouter } from "./routers/stateReqs";
 import { otaRouter } from "./routers/ota";
 import { aiRouter } from "./routers/ai";
+import { orgSettingsRouter } from "./routers/orgSettings";
 
 export const appRouter = router({
   deals: dealsRouter,
@@ -29,6 +30,7 @@ export const appRouter = router({
   stateReqs: stateReqsRouter,
   ota: otaRouter,
   ai: aiRouter,
+  orgSettings: orgSettingsRouter,
 });
 
 export type AppRouter = typeof appRouter;

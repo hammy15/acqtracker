@@ -450,4 +450,90 @@ export const templatesRouter = router({
         },
       });
     }),
+
+  createFromDeal: protectedProcedure
+    .input(
+      z.object({
+        dealId: z.string(),
+        name: z.string().min(1),
+        templateType: z.enum(["PRE_CLOSE", "DAY_OF", "WEEK_1", "WEEK_2"]).default("PRE_CLOSE"),
+        facilityType: z.enum(["SNF", "ALF", "ILF", "HOSPICE", "IN_HOME"]).optional(),
+        includeAssignees: z.boolean().default(false),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { user } = ctx.session;
+      if (!hasPermission(user.role, "templates:create")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "You do not have permission to create templates." });
+      }
+
+      // Verify deal access
+      const deal = await db.deal.findFirst({
+        where: { id: input.dealId, orgId: user.orgId },
+        include: {
+          tasks: {
+            orderBy: [{ workstream: "asc" }, { section: "asc" }, { sortOrder: "asc" }],
+            include: {
+              assignedTo: { select: { role: true } },
+            },
+          },
+        },
+      });
+
+      if (!deal) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Deal not found." });
+      }
+
+      if (deal.tasks.length === 0) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Deal has no tasks to create a template from." });
+      }
+
+      // Create the template
+      const template = await db.template.create({
+        data: {
+          orgId: user.orgId,
+          name: input.name,
+          templateType: input.templateType as any,
+          facilityType: (input.facilityType ?? deal.facilityType) as any,
+          state: deal.state,
+          isDefault: false,
+          createdById: user.id,
+        },
+      });
+
+      // Map old task IDs to new template task IDs for parent-child relationships
+      const oldToNewIdMap = new Map<string, string>();
+
+      for (const task of deal.tasks) {
+        const templateTask = await db.templateTask.create({
+          data: {
+            templateId: template.id,
+            workstream: task.workstream,
+            section: task.section,
+            title: task.title,
+            description: task.description,
+            parentTaskId: task.parentTaskId ? oldToNewIdMap.get(task.parentTaskId) : undefined,
+            sortOrder: task.sortOrder,
+            indentLevel: task.indentLevel,
+            defaultRole: input.includeAssignees ? task.assignedTo?.role : undefined,
+            daysOffset: 0,
+            isRequired: true,
+            isStateSpecific: false,
+            facilityTypes: [],
+            requiresPhoto: false,
+            phase: task.phase as any,
+          },
+        });
+        oldToNewIdMap.set(task.id, templateTask.id);
+      }
+
+      return db.template.findUnique({
+        where: { id: template.id },
+        include: {
+          createdBy: { select: { id: true, name: true, email: true, role: true, avatar: true } },
+          templateTasks: { orderBy: { sortOrder: "asc" } },
+          _count: { select: { deals: true } },
+        },
+      });
+    }),
 });

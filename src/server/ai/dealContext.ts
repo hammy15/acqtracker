@@ -15,6 +15,18 @@ Key domain knowledge:
 
 You have access to tools that let you query the deal database. Use them to provide accurate, data-driven answers. When referencing specific numbers or statuses, always use the tools to get current data rather than guessing.
 
+## Deal Identification Rules
+IMPORTANT: You must correctly identify which deal the user is asking about. Follow these rules:
+1. If a deal context is provided (see below), questions without a specific deal reference apply to that deal.
+2. If the user mentions a deal by name (e.g., "Cedar Ridge" or "Mountain View"), use the search_deals tool to find the matching deal, then use its ID for subsequent queries.
+3. If the user's question is ambiguous and could apply to multiple deals, use list_all_deals to get the full roster, then present a numbered list asking which deal they mean. For example:
+   "I found multiple deals that could match. Which one do you mean?
+   1. **Cedar Ridge SNF Acquisition** - Boise, ID (Due Diligence, 33% complete)
+   2. **Mountain View ALF Acquisition** - Portland, OR (LOI, 16% complete)
+   3. **Sunset Gardens SNF Acquisition** - Sacramento, CA (Pipeline, 0% complete)"
+4. If only one deal matches, proceed with that deal without asking.
+5. When no deal context is set and the user asks a deal-specific question (e.g., "what tasks are blocked?"), use list_all_deals first to check. If there's only one active deal, assume that one. If multiple, ask.
+
 Be concise but thorough. Format responses with markdown when helpful. If you're unsure about something, say so rather than making assumptions.`;
 
 export async function buildSystemPrompt(
@@ -84,28 +96,32 @@ When answering questions, prioritize information about this deal. You can still 
     try {
       const deals = await db.deal.findMany({
         where: { orgId, status: { not: "ARCHIVED" } },
-        select: { status: true },
+        select: {
+          id: true,
+          name: true,
+          facilityName: true,
+          facilityType: true,
+          state: true,
+          city: true,
+          status: true,
+        },
+        orderBy: { updatedAt: "desc" },
       });
 
-      const statusCounts = deals.reduce(
-        (acc, d) => {
-          acc[d.status] = (acc[d.status] || 0) + 1;
-          return acc;
-        },
-        {} as Record<string, number>
-      );
-
-      const statusSummary = Object.entries(statusCounts)
-        .map(([status, count]) => `  - ${status}: ${count}`)
+      const dealList = deals
+        .map(
+          (d) =>
+            `  - **${d.name}** (${d.facilityType}, ${d.city}, ${d.state}) — Status: ${d.status} — ID: ${d.id}`
+        )
         .join("\n");
 
       contextSection = `
 
-## Organization Portfolio Summary
+## Organization Deal Roster
 The user's organization has ${deals.length} active deal(s):
-${statusSummary || "  - No active deals"}
+${dealList || "  - No active deals"}
 
-No specific deal is selected. You can help with portfolio-wide questions or the user can ask about a specific deal.`;
+No specific deal is selected. When the user asks about a deal, match it to one from this roster. If ambiguous, show them the list and ask which deal they mean.`;
     } catch {
       contextSection = `
 

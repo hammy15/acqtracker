@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import {
   Zap,
@@ -11,6 +12,7 @@ import {
   CheckCircle2,
   Mail,
   Loader2,
+  FileStack,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
@@ -169,6 +171,113 @@ export default function TransitionPage() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Save as Template */}
+      <div className="neu-card space-y-4">
+        <div className="flex items-center gap-3 pb-3 border-b border-surface-200 dark:border-surface-800">
+          <FileStack className="w-5 h-5 text-primary-500" />
+          <div>
+            <h2 className="text-lg font-semibold text-surface-900 dark:text-surface-100">Save as Template</h2>
+            <p className="text-xs text-surface-500">Create a reusable template from this deal's task structure</p>
+          </div>
+        </div>
+        <SaveAsTemplateForm dealId={dealId} />
+      </div>
+    </div>
+  );
+}
+
+function SaveAsTemplateForm({ dealId }: { dealId: string }) {
+  const [templateName, setTemplateName] = useState("");
+  const [templateType, setTemplateType] = useState("DAY_OF");
+  const [includeAssignees, setIncludeAssignees] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const utils = trpc.useUtils();
+  const createFromDeal = trpc.templates.createFromDeal.useMutation({
+    onSuccess: () => {
+      setSaved(true);
+      setTemplateName("");
+      utils.templates.list.invalidate();
+      setTimeout(() => setSaved(false), 3000);
+    },
+  });
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
+          Template Name
+        </label>
+        <input
+          type="text"
+          value={templateName}
+          onChange={(e) => setTemplateName(e.target.value)}
+          placeholder="e.g., SNF Transition Template - Idaho"
+          className="neu-input"
+        />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
+            Template Type
+          </label>
+          <select
+            value={templateType}
+            onChange={(e) => setTemplateType(e.target.value)}
+            className="neu-input"
+          >
+            <option value="PRE_CLOSE">Pre-Close</option>
+            <option value="DAY_OF">Day Of</option>
+            <option value="WEEK_1">Week 1</option>
+            <option value="WEEK_2">Week 2</option>
+          </select>
+        </div>
+        <div className="flex items-end">
+          <label className="flex items-center gap-2 text-sm text-surface-700 dark:text-surface-300 cursor-pointer pb-2.5">
+            <input
+              type="checkbox"
+              checked={includeAssignees}
+              onChange={(e) => setIncludeAssignees(e.target.checked)}
+              className="w-4 h-4 rounded border-2 border-surface-300 text-primary-500 focus:ring-primary-500"
+            />
+            Include role assignments
+          </label>
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => {
+            if (!templateName.trim()) return;
+            createFromDeal.mutate({
+              dealId,
+              name: templateName,
+              templateType: templateType as "PRE_CLOSE" | "DAY_OF" | "WEEK_1" | "WEEK_2",
+              includeAssignees,
+            });
+          }}
+          disabled={!templateName.trim() || createFromDeal.isPending}
+          className="neu-button-primary flex items-center gap-2 disabled:opacity-50"
+        >
+          {createFromDeal.isPending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <FileStack className="w-4 h-4" />
+          )}
+          Save as Template
+        </button>
+        {saved && (
+          <span className="text-sm text-emerald-600 font-medium flex items-center gap-1">
+            <CheckCircle2 className="w-4 h-4" />
+            Template saved!
+          </span>
+        )}
+        {createFromDeal.isError && (
+          <span className="text-sm text-red-500">
+            {createFromDeal.error.message}
+          </span>
+        )}
       </div>
     </div>
   );

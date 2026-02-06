@@ -147,11 +147,12 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users     User[]
-  deals     Deal[]
-  templates Template[]
-  regions   Region[]
-  stateReqs StateRequirement[]
+  users       User[]
+  deals       Deal[]
+  templates   Template[]
+  regions     Region[]
+  stateReqs   StateRequirement[]
+  orgSettings OrgSettings?
 }
 
 model Region {
@@ -200,6 +201,7 @@ model User {
   createdTemplates   Template[]          @relation("TemplateCreator")
   aiConversations    AiConversation[]
   otaUploads         OtaDocument[]       @relation("OtaUploader")
+  orgSettingsUpdated OrgSettings[]       @relation("OrgSettingsUpdatedBy")
 
   @@index([orgId])
   @@index([email])
@@ -516,6 +518,41 @@ model ActivityLog {
   @@index([dealId, timestamp])
   @@index([userId])
   @@index([entityType, entityId])
+}
+
+// ─────────────────────────────────────────────
+// ORG SETTINGS
+// ─────────────────────────────────────────────
+
+model OrgSettings {
+  id        String   @id @default(cuid())
+  orgId     String   @unique
+  org       Organization @relation(fields: [orgId], references: [id])
+
+  // Organization
+  timezone      String   @default("America/Boise")
+  dateFormat    String   @default("MMM DD, YYYY")
+
+  // Notifications
+  emailNotifications  Boolean @default(true)
+  dailyDigest         Boolean @default(true)
+  weeklyReport        Boolean @default(false)
+  transitionAlerts    Boolean @default(true)
+
+  // Security
+  sessionTimeoutMinutes Int @default(60)
+  require2fa            Boolean @default(false)
+
+  // Configurable lists (stored as JSON arrays)
+  customWorkstreams   Json @default("[]")
+  customFacilityTypes Json @default("[]")
+  customTaskPhases    Json @default("[]")
+  customDealStatuses  Json @default("[]")
+  customRoles         Json @default("[]")
+
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+  updatedBy   User?   @relation("OrgSettingsUpdatedBy", fields: [updatedById], references: [id])
 }
 
 // ─────────────────────────────────────────────
