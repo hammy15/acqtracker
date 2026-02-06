@@ -23,6 +23,24 @@ export const metadata: Metadata = {
   description:
     "Track healthcare facility acquisitions from pipeline to post-close. Purpose-built for SNF, ALF, and in-home care operators.",
   manifest: "/manifest.json",
+  openGraph: {
+    title: "Acquisition Checklist",
+    description:
+      "Healthcare facility acquisition management — deal tracking, transition day coordination, and state CHOW compliance in one platform.",
+    images: [{ url: "/og-image.svg", width: 1200, height: 630 }],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Acquisition Checklist",
+    description:
+      "Healthcare facility acquisition management — deal tracking, transition day coordination, and state CHOW compliance.",
+    images: ["/og-image.svg"],
+  },
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icons/icon-192.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

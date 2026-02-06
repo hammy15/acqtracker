@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0d9488"/>
+      <stop offset="100%" stop-color="#14b8a6"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded square background -->
+  <rect width="512" height="512" rx="108" fill="url(#bg)"/>
+  <!-- Building -->
+  <rect x="120" y="140" width="180" height="260" rx="16" fill="white" opacity="0.95"/>
+  <rect x="180" y="80" width="80" height="320" rx="12" fill="white" opacity="0.85"/>
+  <!-- Windows -->
+  <rect x="148" y="190" width="32" height="28" rx="6" fill="#14b8a6" opacity="0.5"/>
+  <rect x="148" y="240" width="32" height="28" rx="6" fill="#14b8a6" opacity="0.5"/>
+  <rect x="148" y="290" width="32" height="28" rx="6" fill="#14b8a6" opacity="0.4"/>
+  <rect x="148" y="340" width="32" height="28" rx="6" fill="#14b8a6" opacity="0.3"/>
+  <rect x="200" y="120" width="32" height="28" rx="6" fill="#14b8a6" opacity="0.5"/>
+  <rect x="200" y="170" width="32" height="28" rx="6" fill="#14b8a6" opacity="0.5"/>
+  <rect x="200" y="220" width="32" height="28" rx="6" fill="#14b8a6" opacity="0.5"/>
+  <rect x="200" y="270" width="32" height="28" rx="6" fill="#14b8a6" opacity="0.4"/>
+  <rect x="200" y="320" width="32" height="28" rx="6" fill="#14b8a6" opacity="0.3"/>
+  <rect x="252" y="190" width="32" height="28" rx="6" fill="#14b8a6" opacity="0.5"/>
+  <rect x="252" y="240" width="32" height="28" rx="6" fill="#14b8a6" opacity="0.5"/>
+  <rect x="252" y="290" width="32" height="28" rx="6" fill="#14b8a6" opacity="0.4"/>
+  <rect x="252" y="340" width="32" height="28" rx="6" fill="#14b8a6" opacity="0.3"/>
+  <!-- Checkmark circle -->
+  <circle cx="350" cy="160" r="72" fill="#f97316"/>
+  <circle cx="350" cy="160" r="72" fill="none" stroke="white" stroke-width="4" opacity="0.3"/>
+  <path d="M310 160L338 188L392 132" stroke="white" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
