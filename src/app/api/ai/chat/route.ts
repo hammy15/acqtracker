@@ -13,6 +13,9 @@ import type {
   ToolResultBlockParam,
 } from "@anthropic-ai/sdk/resources/messages";
 
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 const MODEL = "claude-sonnet-4-5-20250929";
 const MAX_TOKENS = 4096;
 const MAX_CONTEXT_MESSAGES = 20;

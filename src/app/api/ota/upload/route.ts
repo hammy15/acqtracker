@@ -4,8 +4,9 @@ import { db } from "@/server/db";
 import { extractTextFromPdf } from "@/server/ai/pdfExtract";
 import { analyzeOta } from "@/server/ai/otaAnalysis";
 import type { AppSession } from "@/types";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
@@ -67,19 +68,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── Save file to uploads directory ─────────────────────────────────────
-    const uploadsDir = join(process.cwd(), "public", "uploads", "ota", dealId);
-    await mkdir(uploadsDir, { recursive: true });
+    // ── Read file buffer ─────────────────────────────────────────────────
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
     const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
     const timestamp = Date.now();
     const storedFileName = `${timestamp}-${safeFileName}`;
-    const filePath = join(uploadsDir, storedFileName);
-    const relativePath = `uploads/ota/${dealId}/${storedFileName}`;
-
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    await writeFile(filePath, buffer);
+    const relativePath = `ota/${dealId}/${storedFileName}`;
 
     // ── Create OtaDocument record with UPLOADING status ────────────────────
     let document = await db.otaDocument.create({
@@ -148,8 +144,6 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("[OTA Upload Error]", error);
 
-    // If we have a document ID, update its status to ERROR
-    // We need to try to extract it from the closure
     const errorMessage =
       error instanceof Error ? error.message : "An unexpected error occurred.";
 
