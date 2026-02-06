@@ -64,16 +64,30 @@ export async function POST(request: NextRequest) {
     try {
       const result = await analyzeOta(document.extractedText!);
 
+      // Provide defaults for any fields the LLM may have omitted
+      const defaultSections = {
+        staffing: [],
+        financial: [],
+        regulatory: [],
+        operations: [],
+        timeline: [],
+        legal: [],
+      };
+
       await db.otaAnalysis.create({
         data: {
           otaDocumentId,
-          summary: result.summary,
-          sections: result.sections as any,
-          risks: result.risks as any,
-          compliance: result.compliance as any,
-          agreedVsOpen: result.agreedVsOpen as any,
-          operationalImpact: result.operationalImpact as any,
-          tokensUsed: result.tokensUsed,
+          summary: result.summary ?? "Analysis completed.",
+          sections: (result.sections ?? defaultSections) as any,
+          risks: (result.risks ?? []) as any,
+          compliance: (result.compliance ?? []) as any,
+          agreedVsOpen: (result.agreedVsOpen ?? {
+            agreed: [],
+            notAgreed: [],
+            ambiguous: [],
+          }) as any,
+          operationalImpact: (result.operationalImpact ?? []) as any,
+          tokensUsed: result.tokensUsed ?? 0,
         },
       });
 
