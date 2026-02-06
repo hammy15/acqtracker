@@ -103,7 +103,21 @@ function SeverityBadge({ severity }: { severity: string }) {
   );
 }
 
-export function OtaAnalysisView({ analysis, documentId }: OtaAnalysisViewProps) {
+export function OtaAnalysisView({ analysis: raw, documentId }: OtaAnalysisViewProps) {
+  // Normalize fields that the LLM may have omitted
+  const analysis = {
+    ...raw,
+    risks: raw.risks ?? [],
+    compliance: raw.compliance ?? [],
+    operationalImpact: raw.operationalImpact ?? [],
+    agreedVsOpen: {
+      agreed: raw.agreedVsOpen?.agreed ?? [],
+      notAgreed: raw.agreedVsOpen?.notAgreed ?? [],
+      ambiguous: raw.agreedVsOpen?.ambiguous ?? [],
+    },
+    sections: raw.sections ?? {},
+  };
+
   return (
     <div id={`ota-analysis-${documentId}`} className="space-y-4">
       {/* Summary */}
