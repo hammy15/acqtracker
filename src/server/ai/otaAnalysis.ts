@@ -129,7 +129,29 @@ export async function analyzeOta(
       jsonText = jsonText.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
     }
 
-    const parsed = JSON.parse(jsonText) as Omit<OtaAnalysisResult, "tokensUsed">;
+    // Extract JSON object between first { and last }
+    const firstBrace = jsonText.indexOf("{");
+    const lastBrace = jsonText.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      jsonText = jsonText.slice(firstBrace, lastBrace + 1);
+    }
+
+    // Fix common JSON issues: trailing commas before } or ]
+    jsonText = jsonText.replace(/,\s*([}\]])/g, "$1");
+
+    let parsed: Omit<OtaAnalysisResult, "tokensUsed">;
+    try {
+      parsed = JSON.parse(jsonText);
+    } catch (firstError) {
+      // If initial parse fails, try more aggressive cleaning
+      // Remove single-line comments
+      jsonText = jsonText.replace(/\/\/[^\n]*/g, "");
+      // Remove multi-line comments
+      jsonText = jsonText.replace(/\/\*[\s\S]*?\*\//g, "");
+      // Fix trailing commas again after comment removal
+      jsonText = jsonText.replace(/,\s*([}\]])/g, "$1");
+      parsed = JSON.parse(jsonText);
+    }
 
     // Calculate tokens used
     const tokensUsed =
