@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Upload, FileText, Loader2, CheckCircle2, AlertCircle, ChevronRight, Trash2 } from "lucide-react";
+import { Upload, FileText, Loader2, CheckCircle2, AlertCircle, ChevronRight, Trash2, Sparkles } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +19,10 @@ export function OtaUploadSection({ dealId }: OtaUploadSectionProps) {
   const deleteMutation = trpc.ota.delete.useMutation({
     onSuccess: () => utils.ota.getByDeal.invalidate({ dealId }),
   });
+  const analyzeMutation = trpc.ota.analyze.useMutation({
+    onSuccess: () => utils.ota.getByDeal.invalidate({ dealId }),
+    onError: () => utils.ota.getByDeal.invalidate({ dealId }),
+  });
 
   const handleUpload = useCallback(async (file: File) => {
     if (!file.type.includes("pdf")) {
@@ -34,6 +38,7 @@ export function OtaUploadSection({ dealId }: OtaUploadSectionProps) {
     setUploadError(null);
 
     try {
+      // Step 1: Upload file & extract text
       const formData = new FormData();
       formData.append("file", file);
       formData.append("dealId", dealId);
@@ -48,13 +53,19 @@ export function OtaUploadSection({ dealId }: OtaUploadSectionProps) {
         throw new Error(data.error || "Upload failed");
       }
 
-      utils.ota.getByDeal.invalidate({ dealId });
+      const { documentId } = await res.json();
+
+      // Refresh the list to show the uploaded doc
+      await utils.ota.getByDeal.invalidate({ dealId });
+
+      // Step 2: Trigger AI analysis (separate call, longer timeout)
+      analyzeMutation.mutate({ otaDocumentId: documentId });
     } catch (err: any) {
       setUploadError(err.message || "Upload failed");
     } finally {
       setIsUploading(false);
     }
-  }, [dealId, utils]);
+  }, [dealId, utils, analyzeMutation]);
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -70,12 +81,14 @@ export function OtaUploadSection({ dealId }: OtaUploadSectionProps) {
   }, [handleUpload]);
 
   const statusLabels: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-    UPLOADING: { label: "Uploading...", color: "text-blue-600", icon: <Loader2 className="w-4 h-4 animate-spin" /> },
+    UPLOADING: { label: "Ready for analysis", color: "text-blue-600", icon: <Sparkles className="w-4 h-4" /> },
     EXTRACTING: { label: "Extracting text...", color: "text-amber-600", icon: <Loader2 className="w-4 h-4 animate-spin" /> },
     ANALYZING: { label: "AI analyzing...", color: "text-violet-600", icon: <Loader2 className="w-4 h-4 animate-spin" /> },
     COMPLETE: { label: "Analysis ready", color: "text-emerald-600", icon: <CheckCircle2 className="w-4 h-4" /> },
     ERROR: { label: "Error", color: "text-red-600", icon: <AlertCircle className="w-4 h-4" /> },
   };
+
+  const isProcessing = isUploading || analyzeMutation.isPending;
 
   return (
     <div className="space-y-4">
@@ -89,7 +102,7 @@ export function OtaUploadSection({ dealId }: OtaUploadSectionProps) {
           isDragging
             ? "border-teal-400 bg-teal-50"
             : "border-gray-200 bg-white hover:border-gray-300",
-          isUploading && "opacity-60 pointer-events-none"
+          isProcessing && "opacity-60 pointer-events-none"
         )}
       >
         <input
@@ -97,10 +110,10 @@ export function OtaUploadSection({ dealId }: OtaUploadSectionProps) {
           accept=".pdf"
           onChange={onFileSelect}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          disabled={isUploading}
+          disabled={isProcessing}
         />
         <div className="flex flex-col items-center gap-3">
-          {isUploading ? (
+          {isProcessing ? (
             <Loader2 className="w-8 h-8 text-teal-500 animate-spin" />
           ) : (
             <div className="h-12 w-12 rounded-2xl bg-teal-50 flex items-center justify-center">
@@ -109,7 +122,7 @@ export function OtaUploadSection({ dealId }: OtaUploadSectionProps) {
           )}
           <div>
             <p className="text-sm font-medium text-gray-700">
-              {isUploading ? "Uploading & analyzing..." : "Upload Operations Transfer Agreement"}
+              {isUploading ? "Uploading..." : analyzeMutation.isPending ? "AI analyzing..." : "Upload Operations Transfer Agreement"}
             </p>
             <p className="text-xs text-gray-400 mt-1">
               Drop a PDF here or click to browse. Max 50MB.
