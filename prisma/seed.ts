@@ -1181,6 +1181,457 @@ async function main() {
   }
 
   // ─────────────────────────────────────────────
+  // 12. OTA DOCUMENTS & ANALYSIS
+  // ─────────────────────────────────────────────
+  console.log("Creating OTA documents & analysis…");
+
+  // ── Cedar Ridge SNF (Due Diligence) — Full OTA with complete analysis ──
+  const otaCedarRidge = await prisma.otaDocument.create({
+    data: {
+      dealId: ddDeal.id,
+      fileName: "Cedar_Ridge_OTA_Final_Draft.pdf",
+      filePath: "/uploads/ota/cedar-ridge-ota-final.pdf",
+      fileSize: 2_450_000,
+      fileType: "application/pdf",
+      uploadedById: sarah.id,
+      status: "COMPLETE",
+      extractedText: "OPERATIONS TRANSFER AGREEMENT between Clearwater Senior Living LLC (Seller) and Cascadia Healthcare Group (Buyer) for Cedar Ridge Skilled Nursing Facility, Boise, Idaho...",
+      createdAt: daysAgo(14),
+      updatedAt: daysAgo(14),
+    },
+  });
+
+  await prisma.otaAnalysis.create({
+    data: {
+      otaDocumentId: otaCedarRidge.id,
+      summary: "• 120-bed SNF transfer with 87 current residents; seller retains liability for pre-close incidents\n• Staffing transition plan requires 90% employee retention for 120 days post-close\n• Medicare/Medicaid provider agreements transfer automatically; managed care contracts require re-credentialing\n• Buyer assumes all vendor contracts except therapy (expires 30 days post-close)\n• $850K escrow holdback for 12 months covering indemnification claims",
+      sections: {
+        staffing: [
+          { title: "Employee Retention Mandate", detail: "Buyer must offer employment to at least 90% of current staff at comparable compensation for minimum 120 days." },
+          { title: "Administrator Transition", detail: "Current administrator agrees to 60-day consulting period post-close at $150/hour." },
+          { title: "Agency Staff Phase-Out", detail: "Seller currently using 4 agency CNAs; buyer plans to convert to permanent hires within 45 days." },
+          { title: "Nursing Leadership", detail: "DNS position must be filled within 14 days of close; interim coverage arranged through staffing agreement." },
+        ],
+        financial: [
+          { title: "Purchase Price Allocation", detail: "Total consideration of $8.5M: $6.2M real property, $1.8M operations/goodwill, $500K equipment and inventory." },
+          { title: "Escrow Holdback", detail: "$850K held in escrow for 12 months to cover indemnification claims, regulatory penalties, and undisclosed liabilities." },
+          { title: "Working Capital Adjustment", detail: "Final working capital target of $340K; adjustment settled within 90 days post-close based on audited figures." },
+          { title: "Accounts Receivable", detail: "Buyer purchases AR over 60 days at 65% of face value; seller retains AR over 120 days." },
+        ],
+        regulatory: [
+          { title: "Idaho CHOW Application", detail: "Filed with Idaho DHW; expected 90-day processing. Confirmation #IDH-2026-04521." },
+          { title: "Medicare Provider Number", detail: "Automatic transfer under 42 CFR §489.18; CMS notification submitted with CHOW filing." },
+          { title: "Medicaid Rate Continuity", detail: "Current Medicaid per diem of $215.40 transfers to buyer; next rate adjustment July 1." },
+          { title: "Fire & Life Safety", detail: "Current fire marshal certificate valid through August 2026; no outstanding citations." },
+        ],
+        operations: [
+          { title: "Resident Census", detail: "87 of 120 beds occupied (72.5%). Payer mix: 42 Medicaid, 30 Medicare Part A, 10 Managed Care, 5 Private Pay." },
+          { title: "Vendor Contract Assignments", detail: "15 vendor contracts assigned to buyer at close; 3 require consent (pharmacy, therapy, dietary)." },
+          { title: "EHR System", detail: "PointClickCare license transfers; buyer responsible for data migration within 180 days if switching systems." },
+          { title: "Dietary Services", detail: "Morrison Healthcare contract assigned; favorable terms through December 2027." },
+        ],
+        timeline: [
+          { title: "Pre-Close Period", detail: "45 days from execution for due diligence, CHOW filing, and financing conditions." },
+          { title: "Transition Day", detail: "Detailed transition checklist required; seller provides 4 staff members for handoff support on day-of." },
+          { title: "Post-Close Integration", detail: "120-day integration period with monthly check-ins between buyer and seller representatives." },
+          { title: "Escrow Release", detail: "Escrow released in two tranches: 50% at 6 months, remaining 50% at 12 months pending no claims." },
+        ],
+        legal: [
+          { title: "Indemnification", detail: "Seller indemnifies buyer for pre-close liabilities, regulatory penalties, and pending litigation (2 minor slip-and-fall claims)." },
+          { title: "Non-Compete", detail: "Seller agrees to 3-year, 50-mile non-compete for skilled nursing operations." },
+          { title: "Representations & Warranties", detail: "Standard reps survive 18 months post-close; fundamental reps (title, authority, taxes) survive 36 months." },
+          { title: "Dispute Resolution", detail: "Binding arbitration in Ada County, Idaho under AAA Commercial Rules; prevailing party recovers attorney fees." },
+        ],
+      },
+      risks: [
+        { title: "Staffing Retention Risk", severity: "high", description: "90% retention mandate may be difficult given current labor market; 4 CNA positions already filled by agency staff.", recommendation: "Begin recruitment for permanent CNA positions immediately; offer retention bonuses to key clinical staff." },
+        { title: "Managed Care Re-credentialing Gap", severity: "medium", description: "3 managed care contracts require re-credentialing which takes 60-90 days; potential revenue gap of $45K/month.", recommendation: "File re-credentialing applications before close date; negotiate bridge payment terms with payers." },
+        { title: "HVAC Capital Expenditure", severity: "medium", description: "East wing HVAC units are original (2003) and will need replacement within 18 months; estimated $180K.", recommendation: "Negotiate seller credit or escrow reduction; include in Year 1 capital budget." },
+        { title: "Pending Litigation", severity: "low", description: "Two pre-close slip-and-fall claims totaling approximately $75K; fully indemnified by seller.", recommendation: "Monitor claims through resolution; ensure escrow covers potential exposure." },
+      ],
+      compliance: [
+        { regulation: "42 CFR §483 — Federal SNF Requirements", concern: "Current staffing ratios meet minimum but fall below recommended levels for night shift", severity: "medium" },
+        { regulation: "Idaho Admin Code 16.03.02 — Skilled Nursing Facilities", concern: "Administrator license transfer must be completed within 30 days of ownership change", severity: "low" },
+        { regulation: "HIPAA / HITECH — Patient Data Transfer", concern: "EHR data migration plan needed; 180-day window for system transition", severity: "low" },
+        { regulation: "CMS Conditions of Participation", concern: "Quality metrics must be maintained during transition; current 3-star rating at risk if staffing drops", severity: "high" },
+      ],
+      agreedVsOpen: {
+        agreed: [
+          { item: "Purchase Price", detail: "$8.5M total consideration with allocation schedule", reference: "Section 2.1" },
+          { item: "Employee Retention", detail: "90% retention at comparable compensation for 120 days", reference: "Section 7.3" },
+          { item: "Escrow Terms", detail: "$850K holdback for 12 months in two-tranche release", reference: "Section 3.4" },
+          { item: "Non-Compete", detail: "3-year, 50-mile radius for skilled nursing operations", reference: "Section 9.2" },
+          { item: "Indemnification Cap", detail: "Seller liability capped at $2.125M (25% of purchase price)", reference: "Section 10.1" },
+        ],
+        notAgreed: [
+          { item: "Working Capital Target", detail: "Buyer proposes $340K; seller countered at $280K. Gap of $60K under negotiation." },
+          { item: "Therapy Contract Assignment", detail: "Current therapy provider (RehabCare) requesting consent fee of $15K; parties disputing responsibility." },
+        ],
+        ambiguous: [
+          { item: "Environmental Liability", detail: "Phase 1 report clean but Phase 2 not conducted; OTA silent on remediation responsibility if issues found post-close." },
+          { item: "Capital Improvement Credits", detail: "Seller claims $120K in recent capital improvements should reduce buyer's escrow requirement; no formal mechanism in current draft." },
+        ],
+      },
+      operationalImpact: [
+        { area: "Clinical Operations", term: "Staffing Transition", impact: "Must maintain current care levels during 120-day retention period while integrating Cascadia protocols", actionRequired: "Deploy transition team lead by Day 1; schedule staff orientation within first 2 weeks" },
+        { area: "Revenue Cycle", term: "Payer Re-credentialing", impact: "Potential 60-90 day gap in managed care revenue ($45K/month exposure)", actionRequired: "File all re-credentialing applications 30 days before close; establish cash reserve for gap period" },
+        { area: "Physical Plant", term: "HVAC Replacement", impact: "$180K capital expenditure required within 18 months for east wing units", actionRequired: "Obtain 3 vendor quotes; schedule replacement for Q3 to avoid winter disruption" },
+        { area: "IT Systems", term: "EHR Migration", impact: "PointClickCare license transfers but data migration may be needed within 180 days", actionRequired: "Evaluate PCC continuation vs. migration to Cascadia standard platform; decide within 60 days" },
+      ],
+      model: "claude-haiku-4-5-20251001",
+      tokensUsed: 3842,
+      createdAt: daysAgo(14),
+      updatedAt: daysAgo(14),
+    },
+  });
+
+  // ── Riverstone SNF (CHOW Filed) — OTA with analysis ──
+  const otaRiverstone = await prisma.otaDocument.create({
+    data: {
+      dealId: chowDeal.id,
+      fileName: "Riverstone_SNF_OTA_Executed.pdf",
+      filePath: "/uploads/ota/riverstone-ota-executed.pdf",
+      fileSize: 1_890_000,
+      fileType: "application/pdf",
+      uploadedById: doug.id,
+      status: "COMPLETE",
+      extractedText: "OPERATIONS TRANSFER AGREEMENT between Inland Empire Health Services (Seller) and Cascadia Healthcare Group (Buyer) for Riverstone Skilled Nursing Facility, Spokane, Washington...",
+      createdAt: daysAgo(20),
+      updatedAt: daysAgo(20),
+    },
+  });
+
+  await prisma.otaAnalysis.create({
+    data: {
+      otaDocumentId: otaRiverstone.id,
+      summary: "• 90-bed SNF in Spokane, WA; built 2015, excellent condition with minimal deferred maintenance\n• Purchase price $6.2M with $620K escrow holdback for 12 months\n• Washington CHOW requires surety bond ($25K secured) and Certificate of Need review\n• All 72 current residents transfer; census has been stable at 80% for 18 months\n• Seller provides 90-day post-close transition support at no additional cost",
+      sections: {
+        staffing: [
+          { title: "Full Staff Complement", detail: "68 FTEs across all departments; no agency staff currently utilized. Turnover rate of 12% annually." },
+          { title: "Retention Agreement", detail: "Buyer offers employment to all current staff at same or better compensation; 90-day guarantee period." },
+          { title: "Administrator", detail: "Current NHA retiring; buyer has identified replacement with WA license already in hand." },
+        ],
+        financial: [
+          { title: "Purchase Price", detail: "$6.2M total: $4.8M real property, $1.1M operations, $300K FF&E." },
+          { title: "Revenue Profile", detail: "Annual revenue $7.8M. Payer mix: Medicare 38%, Medicaid 35%, Managed Care 18%, Private 9%." },
+          { title: "Operating Margin", detail: "Current EBITDA margin of 16.4%; projected to improve to 19% under Cascadia management." },
+        ],
+        regulatory: [
+          { title: "WA CHOW Status", detail: "Application filed; surety bond ($25K) secured with Pacific Surety. Background checks submitted." },
+          { title: "Certificate of Need", detail: "WA requires CON review as part of CHOW; filed concurrently. 60-day estimated review." },
+          { title: "Survey History", detail: "Clean survey history — no IJ citations in last 5 years; most recent survey had 2 minor deficiencies." },
+        ],
+        operations: [
+          { title: "Facility Condition", detail: "Built 2015; roof warranty through 2030. All major systems in excellent condition." },
+          { title: "EHR System", detail: "MatrixCare platform with 3 years remaining on contract. Compatible with Cascadia systems." },
+          { title: "Therapy Services", detail: "In-house therapy program with 4 therapists (2 PT, 1 OT, 1 SLP). Strong outcomes data." },
+        ],
+        timeline: [
+          { title: "CHOW Approval", detail: "Expected within 60 days of filing; interim approval possible within 30 days." },
+          { title: "Close Target", detail: "30 days from today; contingent on CHOW approval." },
+          { title: "Post-Close Support", detail: "Seller provides 90-day transition assistance including outgoing administrator availability." },
+        ],
+        legal: [
+          { title: "Clean Title", detail: "Title commitment clear; no liens or encumbrances. Title insurance secured." },
+          { title: "Non-Compete", detail: "Seller agrees to 5-year, 75-mile non-compete for SNF operations in Washington state." },
+          { title: "Indemnification", detail: "Seller indemnifies for pre-close liabilities; cap at 20% of purchase price ($1.24M)." },
+        ],
+      },
+      risks: [
+        { title: "CON Review Delay", severity: "medium", description: "WA Certificate of Need review could extend beyond 60 days if additional information requested.", recommendation: "Maintain regular contact with WA DOH reviewer; have supplemental documentation ready." },
+        { title: "Administrator Transition", severity: "low", description: "Current NHA retiring; replacement identified but not yet on-boarded.", recommendation: "Finalize employment agreement with new NHA; arrange overlap period for knowledge transfer." },
+        { title: "Managed Care Contract Terms", severity: "low", description: "Two managed care contracts have 90-day termination clauses that payers could exercise.", recommendation: "Schedule introductory meetings with managed care contacts before close to ensure continuity." },
+      ],
+      compliance: [
+        { regulation: "WAC 388-97 — Nursing Home Licensing", concern: "New administrator must be licensed in WA within 30 days of assuming duties", severity: "low" },
+        { regulation: "WA Certificate of Need (RCW 70.38)", concern: "CON approval required before ownership transfer becomes effective", severity: "medium" },
+        { regulation: "WA Background Check Requirements", concern: "All principals and key personnel must clear WA DSHS background checks", severity: "low" },
+      ],
+      agreedVsOpen: {
+        agreed: [
+          { item: "Purchase Price", detail: "$6.2M with standard allocation", reference: "Section 2.1" },
+          { item: "Surety Bond", detail: "$25K bond secured per WA requirements", reference: "Section 4.6" },
+          { item: "Transition Support", detail: "90-day post-close assistance at seller's expense", reference: "Section 8.1" },
+          { item: "Non-Compete", detail: "5-year, 75-mile for SNF operations", reference: "Section 9.1" },
+        ],
+        notAgreed: [
+          { item: "Escrow Release Schedule", detail: "Buyer wants 12-month single release; seller proposes 6-month release." },
+        ],
+        ambiguous: [
+          { item: "Therapy Program Transition", detail: "In-house therapy staff are employees but OTA doesn't specify if therapy contracts with outside referral sources transfer." },
+        ],
+      },
+      operationalImpact: [
+        { area: "Administration", term: "NHA Transition", impact: "New administrator must be on-boarded and oriented to facility within first 2 weeks", actionRequired: "Complete NHA employment agreement; schedule facility orientation and staff introductions" },
+        { area: "Clinical", term: "Staff Retention", impact: "High retention expected given no agency usage and low turnover; minimal disruption anticipated", actionRequired: "Host all-staff meeting within first 48 hours; communicate job security and Cascadia benefits" },
+        { area: "Financial", term: "Revenue Continuity", impact: "Strong payer mix with stable census should provide smooth financial transition", actionRequired: "Set up new billing NPI within 30 days; notify all payers of ownership change" },
+      ],
+      model: "claude-haiku-4-5-20251001",
+      tokensUsed: 3256,
+      createdAt: daysAgo(20),
+      updatedAt: daysAgo(20),
+    },
+  });
+
+  // ── Pinecrest ALF (Closing) — OTA with analysis ──
+  const otaPinecrest = await prisma.otaDocument.create({
+    data: {
+      dealId: closingDeal.id,
+      fileName: "Pinecrest_ALF_Operations_Transfer_Agreement.pdf",
+      filePath: "/uploads/ota/pinecrest-ota.pdf",
+      fileSize: 1_620_000,
+      fileType: "application/pdf",
+      uploadedById: maria.id,
+      status: "COMPLETE",
+      extractedText: "OPERATIONS TRANSFER AGREEMENT between Willamette Valley Senior Living (Seller) and Cascadia Healthcare Group (Buyer) for Pinecrest Assisted Living, Eugene, Oregon...",
+      createdAt: daysAgo(15),
+      updatedAt: daysAgo(15),
+    },
+  });
+
+  await prisma.otaAnalysis.create({
+    data: {
+      otaDocumentId: otaPinecrest.id,
+      summary: "• 56-bed ALF in Eugene, OR; established community with 94% occupancy and strong private-pay base\n• Purchase price $3.9M; straightforward asset purchase with $390K escrow\n• Oregon CHOW approval already received — clear path to close within 7 days\n• 28 of 30 staff retained; two voluntary departures already backfilled\n• No Certificate of Need required for ALF transfers in Oregon",
+      sections: {
+        staffing: [
+          { title: "Caregiver Ratios", detail: "Current ratio of 1:8 during day, 1:12 at night. Meets Oregon minimum; Cascadia plans to improve to 1:7 day." },
+          { title: "Staff Retention", detail: "28 of 30 staff accepting offers; 2 departures (retirement, relocation) already backfilled." },
+          { title: "Training Requirements", detail: "All caregivers current on Oregon OSBN requirements; CPR/First Aid certifications valid through 2027." },
+        ],
+        financial: [
+          { title: "Revenue Model", detail: "85% private pay, 15% Medicaid waiver. Average private-pay rate $4,200/month — 12% below market." },
+          { title: "Occupancy", detail: "53 of 56 units occupied (94.6%). Waitlist of 4 prospective residents." },
+          { title: "Upside Opportunity", detail: "Rate increase to market ($4,700/month) projected to add $318K annual revenue." },
+        ],
+        regulatory: [
+          { title: "Oregon CHOW", detail: "Approval received from Oregon Health Authority on January 28, 2026." },
+          { title: "Administrator Certification", detail: "Buyer's designated administrator holds current Oregon ALF administrator certificate." },
+          { title: "Inspection History", detail: "No Type A violations in last 3 inspection cycles; 1 minor Type B corrected on-site." },
+        ],
+        operations: [
+          { title: "Memory Care Wing", detail: "12-bed secured memory care wing operates at 100% capacity with specialized programming." },
+          { title: "Dietary Program", detail: "In-house kitchen with full-time chef; highly rated by residents in satisfaction surveys." },
+          { title: "Transportation", detail: "Facility-owned 14-passenger bus; used for medical appointments and community outings." },
+        ],
+        timeline: [
+          { title: "Close Date", detail: "Scheduled for 7 days from now; all contingencies satisfied." },
+          { title: "Transition Day", detail: "Cascadia transition team of 4 assigned; 12-hour on-site coverage planned." },
+          { title: "Integration", detail: "60-day integration plan including system migration and policy alignment." },
+        ],
+        legal: [
+          { title: "Asset Purchase", detail: "Clean asset purchase; no assumed liabilities beyond assigned contracts." },
+          { title: "Non-Compete", detail: "Seller non-compete: 2 years, 25 miles for assisted living operations." },
+          { title: "Lease Assignment", detail: "Ground lease assigned with landlord consent; 15 years remaining with two 5-year options." },
+        ],
+      },
+      risks: [
+        { title: "Below-Market Rates", severity: "low", description: "Current private-pay rates 12% below market; rate increase may cause some resident attrition.", recommendation: "Phase rate increase over 6 months; grandfather existing residents at 5% increase initially." },
+        { title: "Ground Lease Dependency", severity: "medium", description: "Facility operates on ground lease; landlord consent obtained but lease terms limit capital improvements over $50K.", recommendation: "Negotiate lease amendment for capital improvement flexibility before major renovations." },
+      ],
+      compliance: [
+        { regulation: "OAR 411-054 — Assisted Living Facilities", concern: "Memory care wing staffing must meet enhanced requirements under Oregon rules", severity: "low" },
+        { regulation: "Oregon Fair Housing Act", concern: "Admission criteria review needed to ensure compliance with updated state guidelines", severity: "low" },
+      ],
+      agreedVsOpen: {
+        agreed: [
+          { item: "Purchase Price", detail: "$3.9M asset purchase", reference: "Section 2.1" },
+          { item: "CHOW Approval", detail: "Received January 28, 2026", reference: "Section 5.2" },
+          { item: "Staff Transition", detail: "All current staff offered employment at comparable terms", reference: "Section 7.1" },
+          { item: "Ground Lease Assignment", detail: "Landlord consent obtained; lease assigned at close", reference: "Section 4.3" },
+        ],
+        notAgreed: [],
+        ambiguous: [
+          { item: "Resident Trust Accounts", detail: "OTA references transfer of resident trust account balances but doesn't specify reconciliation process." },
+        ],
+      },
+      operationalImpact: [
+        { area: "Revenue", term: "Rate Optimization", impact: "Immediate opportunity to increase revenue $318K/year through market-rate adjustment", actionRequired: "Develop phased rate increase communication plan for residents and families" },
+        { area: "Memory Care", term: "Program Enhancement", impact: "Memory care wing at capacity; potential to convert 4 additional rooms to expand program", actionRequired: "Assess conversion feasibility and regulatory requirements within 90 days" },
+      ],
+      model: "claude-haiku-4-5-20251001",
+      tokensUsed: 2890,
+      createdAt: daysAgo(15),
+      updatedAt: daysAgo(15),
+    },
+  });
+
+  // ── Mountain View ALF (LOI) — OTA uploaded but still analyzing ──
+  await prisma.otaDocument.create({
+    data: {
+      dealId: loiDeal.id,
+      fileName: "Mountain_View_ALF_OTA_Draft_v1.pdf",
+      filePath: "/uploads/ota/mountain-view-ota-draft.pdf",
+      fileSize: 980_000,
+      fileType: "application/pdf",
+      uploadedById: sarah.id,
+      status: "UPLOADING",
+      extractedText: "DRAFT — OPERATIONS TRANSFER AGREEMENT between Pacific Senior Care Inc (Seller) and Cascadia Healthcare Group (Buyer) for Mountain View Assisted Living, Portland, Oregon...",
+      createdAt: daysAgo(5),
+      updatedAt: daysAgo(5),
+    },
+  });
+
+  // ── Maple Grove SNF (Transition Day) — Fully analyzed OTA ──
+  const otaMapleGrove = await prisma.otaDocument.create({
+    data: {
+      dealId: tdDeal.id,
+      fileName: "Maple_Grove_SNF_OTA_Executed_Final.pdf",
+      filePath: "/uploads/ota/maple-grove-ota-final.pdf",
+      fileSize: 2_100_000,
+      fileType: "application/pdf",
+      uploadedById: sarah.id,
+      status: "COMPLETE",
+      extractedText: "EXECUTED OPERATIONS TRANSFER AGREEMENT between Magic Valley Healthcare LLC (Seller) and Cascadia Healthcare Group (Buyer) for Maple Grove Skilled Nursing, Twin Falls, Idaho...",
+      createdAt: daysAgo(10),
+      updatedAt: daysAgo(10),
+    },
+  });
+
+  await prisma.otaAnalysis.create({
+    data: {
+      otaDocumentId: otaMapleGrove.id,
+      summary: "• 100-bed SNF in Twin Falls, ID; transition day in progress with all pre-close items satisfied\n• Purchase price $7.1M; closing completed yesterday with clean title transfer\n• 87 residents in census; 13 beds available for post-acquisition growth\n• Idaho CHOW approved; new Medicare/Medicaid provider numbers active\n• Strong therapy program with in-house team generating 35% of revenue",
+      sections: {
+        staffing: [
+          { title: "Full Retention Achieved", detail: "100% of clinical staff accepted employment offers. Total FTE count: 82." },
+          { title: "Therapy Team", detail: "6 in-house therapists (3 PT, 2 OT, 1 SLP); strong Part A revenue generator." },
+          { title: "New DNS Appointed", detail: "Sarah Chen designated as interim DNS for first 90 days; permanent hire in recruitment." },
+        ],
+        financial: [
+          { title: "Purchase Price", detail: "$7.1M; $5.4M real property, $1.3M operations, $400K equipment." },
+          { title: "Therapy Revenue", detail: "In-house therapy generates $2.7M annually (35% of total revenue); strong Part A utilization." },
+          { title: "Medicaid Rate", detail: "Idaho Medicaid per diem of $198.50; rate review pending for July increase." },
+        ],
+        regulatory: [
+          { title: "CHOW Approved", detail: "Idaho DHW approval received; all regulatory requirements satisfied." },
+          { title: "Provider Numbers", detail: "New Medicare and Medicaid provider numbers active as of close date." },
+          { title: "Licenses Current", detail: "Facility license, fire certificate, and food service permit all current." },
+        ],
+        operations: [
+          { title: "Census", detail: "87 of 100 beds (87%); upside potential with 13 available beds." },
+          { title: "Physical Plant", detail: "Built 2008; good condition. Recent $200K renovation of rehab gym and dining room." },
+          { title: "Technology", detail: "PointClickCare EHR; same platform as Cedar Ridge for operational consistency." },
+        ],
+        timeline: [
+          { title: "Transition Day", detail: "In progress today. All pre-close items complete. Team on-site since 6am." },
+          { title: "Week 1 Plan", detail: "Staff orientation, system access setup, policy distribution, community meet-and-greet." },
+          { title: "90-Day Goals", detail: "Implement Cascadia clinical protocols, achieve 92% census, complete all system integrations." },
+        ],
+        legal: [
+          { title: "Clean Closing", detail: "All conditions precedent satisfied; funds wired; deed recorded." },
+          { title: "Seller Support", detail: "Seller providing 30-day phone support for operational questions." },
+          { title: "Non-Compete", detail: "3-year, 50-mile non-compete for SNF operations in Idaho." },
+        ],
+      },
+      risks: [
+        { title: "DNS Vacancy", severity: "medium", description: "Permanent DNS position not yet filled; interim arrangement with Sarah Chen for 90 days.", recommendation: "Post DNS position within first week; target hire within 60 days to allow overlap." },
+        { title: "Medicaid Rate Uncertainty", severity: "low", description: "Idaho Medicaid rate review pending; outcome could affect 42% of revenue.", recommendation: "Participate in rate review process; model scenarios for potential rate changes." },
+      ],
+      compliance: [
+        { regulation: "Idaho Admin Code 16.03.02", concern: "All staff must complete Cascadia orientation including abuse prevention training within 30 days", severity: "low" },
+        { regulation: "CMS Quality Reporting", concern: "Quality measures must be reported under new provider number starting immediately", severity: "low" },
+      ],
+      agreedVsOpen: {
+        agreed: [
+          { item: "All Terms Executed", detail: "OTA fully executed with no open items; all conditions satisfied at closing", reference: "Entire Agreement" },
+          { item: "Purchase Price", detail: "$7.1M with agreed allocation", reference: "Section 2.1" },
+          { item: "Employee Transition", detail: "100% staff retention achieved", reference: "Section 7" },
+          { item: "Regulatory Approvals", detail: "Idaho CHOW and all permits approved and transferred", reference: "Section 5" },
+        ],
+        notAgreed: [],
+        ambiguous: [],
+      },
+      operationalImpact: [
+        { area: "Clinical", term: "Protocol Integration", impact: "Must transition from seller's clinical protocols to Cascadia standards within 90 days", actionRequired: "Deploy clinical integration team; distribute new P&P manuals within Week 1" },
+        { area: "Therapy", term: "Revenue Optimization", impact: "Strong in-house therapy program should be protected during transition to maintain Part A revenue", actionRequired: "Meet with therapy team Day 1 to confirm continuity; review utilization targets" },
+        { area: "Census Growth", term: "Marketing Launch", impact: "13 available beds represent $1.2M annual revenue opportunity", actionRequired: "Launch marketing campaign and community outreach within 30 days" },
+      ],
+      model: "claude-haiku-4-5-20251001",
+      tokensUsed: 3150,
+      createdAt: daysAgo(10),
+      updatedAt: daysAgo(10),
+    },
+  });
+
+  // ── Cascade Heights SNF (Post-Close) — Historical OTA ──
+  const otaCascade = await prisma.otaDocument.create({
+    data: {
+      dealId: postCloseDeal.id,
+      fileName: "Cascade_Heights_OTA_Executed.pdf",
+      filePath: "/uploads/ota/cascade-heights-ota.pdf",
+      fileSize: 2_340_000,
+      fileType: "application/pdf",
+      uploadedById: doug.id,
+      status: "COMPLETE",
+      extractedText: "EXECUTED OPERATIONS TRANSFER AGREEMENT for Cascade Heights Skilled Nursing, Seattle, Washington...",
+      createdAt: daysAgo(35),
+      updatedAt: daysAgo(35),
+    },
+  });
+
+  await prisma.otaAnalysis.create({
+    data: {
+      otaDocumentId: otaCascade.id,
+      summary: "• 130-bed SNF in Seattle, WA; largest acquisition in Cascadia portfolio at $11.5M\n• Transition completed 28 days ago; all post-close milestones on track\n• 112 current residents (86% census); strong Medicare Advantage presence\n• Full staff retention achieved with zero turnover during transition period\n• Integration substantially complete; operating under Cascadia protocols",
+      sections: {
+        staffing: [
+          { title: "Staffing Complete", detail: "94 FTEs fully transitioned to Cascadia employment; no turnover during 28-day transition." },
+          { title: "Leadership Team", detail: "New NHA and DNS in place; both previously operated Cascadia facilities." },
+          { title: "Agency Elimination", detail: "Eliminated 6 agency positions by converting to permanent staff with sign-on bonuses." },
+        ],
+        financial: [
+          { title: "Purchase Price", detail: "$11.5M; largest acquisition to date. Currently performing above pro forma projections." },
+          { title: "Revenue", detail: "Monthly revenue of $1.1M; trending 4% above initial projections due to census growth." },
+          { title: "Cost Synergies", detail: "Group purchasing and shared services generating $15K/month in savings vs. prior operations." },
+        ],
+        regulatory: [
+          { title: "WA CHOW Complete", detail: "Full regulatory approval received; all licenses transferred." },
+          { title: "Medicare Advantage", detail: "All 4 MA contracts successfully re-credentialed within 45 days." },
+          { title: "Survey Ready", detail: "Post-acquisition survey readiness assessment scored 94%; no deficiencies expected." },
+        ],
+        operations: [
+          { title: "Census Growth", detail: "Grew from 108 to 112 residents in first month (86% occupancy); targeting 120 by Q2." },
+          { title: "Quality Scores", detail: "Maintained 4-star CMS rating through transition; targeting 5-star by next review cycle." },
+          { title: "Systems", detail: "Fully migrated to Cascadia EHR (PointClickCare) with all historical data preserved." },
+        ],
+        timeline: [
+          { title: "Transition Complete", detail: "All Day 1 and Week 1 checklist items completed successfully." },
+          { title: "Integration Status", detail: "90% of integration milestones achieved in first 28 days." },
+          { title: "Remaining Items", detail: "Final items: complete staff performance reviews and finalize vendor renegotiations." },
+        ],
+        legal: [
+          { title: "Escrow Status", detail: "$1.15M escrow active; no claims filed. First release at 6 months." },
+          { title: "Seller Compliance", detail: "Seller meeting all post-close obligations; no disputes." },
+          { title: "Insurance", detail: "Tail policy active for pre-close professional liability; Cascadia coverage effective from close." },
+        ],
+      },
+      risks: [
+        { title: "Census Target Aggressive", severity: "low", description: "Target of 120 residents by Q2 requires adding 8 admissions in 60 days.", recommendation: "Continue marketing push; leverage Cascadia referral network from other facilities." },
+      ],
+      compliance: [
+        { regulation: "WA Quality Assurance", concern: "First post-acquisition quality assessment due within 60 days; preparation underway", severity: "low" },
+      ],
+      agreedVsOpen: {
+        agreed: [
+          { item: "All Terms Satisfied", detail: "Transaction fully closed and all post-close obligations being met", reference: "Entire Agreement" },
+        ],
+        notAgreed: [],
+        ambiguous: [],
+      },
+      operationalImpact: [
+        { area: "Growth", term: "Census Building", impact: "8 additional admissions needed to hit 120-bed target; each bed worth ~$8K/month", actionRequired: "Weekly admissions review; deploy community liaison for hospital discharge planning" },
+      ],
+      model: "claude-haiku-4-5-20251001",
+      tokensUsed: 2980,
+      createdAt: daysAgo(35),
+      updatedAt: daysAgo(35),
+    },
+  });
+
+  const otaCount = 6; // 5 with analysis, 1 draft
+
+  // ─────────────────────────────────────────────
   // SUMMARY
   // ─────────────────────────────────────────────
   console.log("\n━━━ Seed Complete ━━━");
@@ -1199,6 +1650,7 @@ async function main() {
   console.log(`  ├─ Week 1:         Valley View ILF`);
   console.log(`  └─ Post-Close:     Cascade Heights SNF`);
   console.log(`DD Docs:          ${ddDocs.length} (Cedar Ridge)`);
+  console.log(`OTA Documents:    ${otaCount} (5 analyzed, 1 draft)`);
   console.log("");
   console.log("God mode login: owen / jockibox26");
   console.log("Team login:     any team email / password123");
