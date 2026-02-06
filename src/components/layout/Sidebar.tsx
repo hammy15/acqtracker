@@ -77,11 +77,11 @@ export function Sidebar() {
       <div className="h-16 flex items-center px-4 border-b border-surface-200 dark:border-surface-800">
         <Link href="/" className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-primary-500 flex items-center justify-center text-white font-bold text-sm shrink-0">
-            AT
+            AC
           </div>
           {!sidebarCollapsed && (
             <span className="text-lg font-bold text-surface-900 dark:text-surface-100">
-              AcqTracker
+              Acquisition Checklist
             </span>
           )}
         </Link>

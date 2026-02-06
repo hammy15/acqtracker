@@ -170,10 +170,10 @@ export function TopNavbar() {
                 "transition-transform duration-200 hover:scale-105"
               )}
             >
-              AT
+              AC
             </div>
             <span className="hidden text-[15px] font-semibold tracking-[-0.01em] text-gray-900 sm:block">
-              Acq<span className="text-teal-600">Tracker</span>
+              Acquisition<span className="text-teal-600">Checklist</span>
             </span>
           </Link>
 

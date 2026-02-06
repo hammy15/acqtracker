@@ -19,7 +19,7 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AcqTracker — Healthcare Acquisition Management",
+  title: "Acquisition Checklist — Healthcare Acquisition Management",
   description:
     "Track healthcare facility acquisitions from pipeline to post-close. Purpose-built for SNF, ALF, and in-home care operators.",
 };

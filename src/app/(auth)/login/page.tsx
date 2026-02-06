@@ -49,7 +49,7 @@ export default function LoginPage() {
           >
             <Building2 className="w-7 h-7" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">AcqTracker</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Acquisition Checklist</h1>
           <p className="text-sm text-gray-500 mt-1">
             Healthcare Acquisition Management
           </p>
@@ -72,7 +72,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="neu-input"
-              placeholder="admin@acqtracker.com"
+              placeholder="admin@acquisitionchecklist.com"
               required
             />
           </div>

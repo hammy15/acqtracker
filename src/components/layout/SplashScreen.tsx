@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 
-const STORAGE_KEY = "acqtracker_welcomed";
+const STORAGE_KEY = "acquisitionchecklist_welcomed";
 
 export function SplashScreen() {
   const [visible, setVisible] = useState(false);
@@ -81,7 +81,7 @@ export function SplashScreen() {
             className="text-white font-bold select-none"
             style={{ fontSize: 32, letterSpacing: "-0.02em" }}
           >
-            AT
+            AC
           </span>
         </div>
 
@@ -97,7 +97,7 @@ export function SplashScreen() {
             transitionDelay: "150ms",
           }}
         >
-          AcqTracker
+          Acquisition Checklist
         </h1>
 
         {/* Subtitle */}
