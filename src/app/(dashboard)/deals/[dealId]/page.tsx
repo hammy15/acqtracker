@@ -23,8 +23,12 @@ import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { ProgressBar } from "@/components/shared/ProgressBar";
+import { PresenceIndicator } from "@/components/shared/PresenceIndicator";
+import { LiveIndicator } from "@/components/shared/LiveIndicator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WORKSTREAM_LIST } from "@/lib/constants";
+import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
+import { broadcastEvent } from "@/lib/realtime";
 
 // ---------------------------------------------------------------------------
 // Status config
@@ -254,7 +258,7 @@ export default function ChecklistPage() {
 
   const utils = trpc.useUtils();
 
-  const { data: tasks, isLoading } = trpc.tasks.listByDeal.useQuery(
+  const tasksQuery = trpc.tasks.listByDeal.useQuery(
     {
       dealId,
       phase: phase || undefined,
@@ -266,10 +270,26 @@ export default function ChecklistPage() {
     { enabled: !!dealId }
   );
 
+  const { data: tasks, isLoading } = tasksQuery;
+
+  // Smart polling: refetch on focus, visibility, cross-tab events, + 10s polling
+  useRealtimeQuery(tasksQuery, {
+    pollingInterval: 10_000,
+    eventFilter: (e) =>
+      (e.type === "task-updated" || e.type === "task-completed") &&
+      e.dealId === dealId,
+  });
+
   const updateStatus = trpc.tasks.updateStatus.useMutation({
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       utils.tasks.listByDeal.invalidate({ dealId });
       utils.deals.getById.invalidate({ id: dealId });
+      // Broadcast to other tabs
+      broadcastEvent({
+        type: variables.status === "COMPLETE" ? "task-completed" : "task-updated",
+        dealId,
+        taskId: variables.id,
+      });
     },
   });
 
@@ -335,6 +355,12 @@ export default function ChecklistPage() {
 
   return (
     <div className="space-y-4">
+      {/* Header: Presence + Live indicator */}
+      <div className="flex items-center justify-between">
+        <PresenceIndicator dealId={dealId} />
+        <LiveIndicator isPolling={true} />
+      </div>
+
       {/* Task Summary */}
       <div className="flex flex-wrap items-center gap-4 text-sm">
         <span className="flex items-center gap-2 text-gray-700">

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Plus, LayoutGrid, List, Search } from "lucide-react";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { ProgressBar } from "@/components/shared/ProgressBar";
+import { PermissionGate } from "@/components/shared/PermissionGate";
 import { trpc } from "@/lib/trpc";
 
 const DEAL_STATUSES = [
@@ -85,10 +86,12 @@ export default function DealsPage() {
             {total} active acquisition{total !== 1 ? "s" : ""}
           </p>
         </div>
-        <Link href="/deals/new" className="neu-button-primary flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          New Deal
-        </Link>
+        <PermissionGate permission="deals:create">
+          <Link href="/deals/new" className="neu-button-primary flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            New Deal
+          </Link>
+        </PermissionGate>
       </div>
 
       {/* Filters */}

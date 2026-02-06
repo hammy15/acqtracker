@@ -336,4 +336,154 @@ export const reportsRouter = router({
         byState,
       };
     }),
+
+  taskCompletionTrend: protectedProcedure
+    .input(
+      z.object({
+        dealId: z.string().optional(),
+        days: z.number().min(1).max(365).default(30),
+      }).optional()
+    )
+    .query(async ({ ctx, input }) => {
+      const { user } = ctx.session;
+      if (!hasPermission(user.role, "reports:read")) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      const days = input?.days ?? 30;
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+      startDate.setHours(0, 0, 0, 0);
+
+      // Build deal filter
+      let dealFilter: Record<string, unknown> = {};
+      if (input?.dealId) {
+        const canAccess = await canAccessDeal(user.id, user.role, input.dealId);
+        if (!canAccess) throw new TRPCError({ code: "FORBIDDEN" });
+        dealFilter = { dealId: input.dealId };
+      } else {
+        const scope = await getDealsScope(user.id, user.role, user.orgId);
+        const accessibleDeals = await db.deal.findMany({
+          where: scope.where as any,
+          select: { id: true },
+        });
+        dealFilter = { dealId: { in: accessibleDeals.map((d) => d.id) } };
+      }
+
+      // Get all tasks completed in the date range
+      const completedTasks = await db.task.findMany({
+        where: {
+          ...dealFilter,
+          status: "COMPLETE",
+          completedDate: { gte: startDate },
+        } as any,
+        select: {
+          id: true,
+          completedDate: true,
+        },
+        orderBy: { completedDate: "asc" },
+      });
+
+      // Build daily counts
+      const dailyCounts: Record<string, number> = {};
+      for (const task of completedTasks) {
+        if (task.completedDate) {
+          const dateKey = task.completedDate.toISOString().split("T")[0];
+          dailyCounts[dateKey] = (dailyCounts[dateKey] || 0) + 1;
+        }
+      }
+
+      // Generate all dates in range and build cumulative data
+      const result: { date: string; completed: number; cumulative: number }[] = [];
+      let cumulative = 0;
+      const currentDate = new Date(startDate);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+
+      while (currentDate <= today) {
+        const dateKey = currentDate.toISOString().split("T")[0];
+        const dailyCount = dailyCounts[dateKey] || 0;
+        cumulative += dailyCount;
+        result.push({
+          date: dateKey,
+          completed: dailyCount,
+          cumulative,
+        });
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      return result;
+    }),
+
+  workstreamBreakdown: protectedProcedure
+    .input(
+      z.object({
+        dealId: z.string().optional(),
+      }).optional()
+    )
+    .query(async ({ ctx, input }) => {
+      const { user } = ctx.session;
+      if (!hasPermission(user.role, "reports:read")) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      // Build deal filter
+      let dealFilter: Record<string, unknown> = {};
+      if (input?.dealId) {
+        const canAccess = await canAccessDeal(user.id, user.role, input.dealId);
+        if (!canAccess) throw new TRPCError({ code: "FORBIDDEN" });
+        dealFilter = { dealId: input.dealId };
+      } else {
+        const scope = await getDealsScope(user.id, user.role, user.orgId);
+        const accessibleDeals = await db.deal.findMany({
+          where: scope.where as any,
+          select: { id: true },
+        });
+        dealFilter = { dealId: { in: accessibleDeals.map((d) => d.id) } };
+      }
+
+      const tasks = await db.task.findMany({
+        where: dealFilter as any,
+        select: {
+          id: true,
+          workstream: true,
+          status: true,
+        },
+      });
+
+      // Aggregate by workstream
+      const byWorkstream: Record<
+        string,
+        { completed: number; inProgress: number; blocked: number; notStarted: number }
+      > = {};
+
+      for (const task of tasks) {
+        if (!byWorkstream[task.workstream]) {
+          byWorkstream[task.workstream] = { completed: 0, inProgress: 0, blocked: 0, notStarted: 0 };
+        }
+        const ws = byWorkstream[task.workstream];
+        switch (task.status) {
+          case "COMPLETE":
+            ws.completed++;
+            break;
+          case "IN_PROGRESS":
+          case "UNDER_REVIEW":
+          case "WAITING":
+            ws.inProgress++;
+            break;
+          case "BLOCKED":
+            ws.blocked++;
+            break;
+          case "NOT_STARTED":
+            ws.notStarted++;
+            break;
+          // NA tasks are excluded from the breakdown
+        }
+      }
+
+      return Object.entries(byWorkstream).map(([workstream, counts]) => ({
+        workstream,
+        ...counts,
+      }));
+    }),
 });

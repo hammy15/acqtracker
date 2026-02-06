@@ -13,6 +13,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const DEAL_STATUSES = [
   { value: "PIPELINE", label: "Pipeline" },
@@ -43,6 +44,7 @@ export default function DealSettingsPage() {
 
   const { data: allUsers } = trpc.users.list.useQuery({});
 
+  const { can } = usePermissions();
   const utils = trpc.useUtils();
 
   const updateDeal = trpc.deals.update.useMutation({
@@ -228,26 +230,30 @@ export default function DealSettingsPage() {
       {/* Actions */}
       <div className="flex items-center justify-between">
         <div className="flex gap-3">
-          <button
-            onClick={() => archiveDeal.mutate({ id: dealId })}
-            disabled={archiveDeal.isPending}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
-          >
-            <Archive className="w-4 h-4" />
-            {archiveDeal.isPending ? "Archiving..." : "Archive Deal"}
-          </button>
-          <button
-            onClick={() => {
-              if (confirm("Are you sure you want to delete this deal? This action cannot be undone.")) {
-                deleteDeal.mutate({ id: dealId });
-              }
-            }}
-            disabled={deleteDeal.isPending}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-          >
-            <Trash2 className="w-4 h-4" />
-            {deleteDeal.isPending ? "Deleting..." : "Delete Deal"}
-          </button>
+          {can("deals:archive") && (
+            <button
+              onClick={() => archiveDeal.mutate({ id: dealId })}
+              disabled={archiveDeal.isPending}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
+            >
+              <Archive className="w-4 h-4" />
+              {archiveDeal.isPending ? "Archiving..." : "Archive Deal"}
+            </button>
+          )}
+          {can("deals:delete") && (
+            <button
+              onClick={() => {
+                if (confirm("Are you sure you want to delete this deal? This action cannot be undone.")) {
+                  deleteDeal.mutate({ id: dealId });
+                }
+              }}
+              disabled={deleteDeal.isPending}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              {deleteDeal.isPending ? "Deleting..." : "Delete Deal"}
+            </button>
+          )}
         </div>
         <button
           onClick={handleSave}

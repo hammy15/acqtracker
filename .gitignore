@@ -51,3 +51,9 @@ android/build/
 android/captures/
 android/.idea/
 android/local.properties
+
+# Build artifacts
+build/
+fastlane/report.xml
+fastlane/screenshots
+fastlane/test_output

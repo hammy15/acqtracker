@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { PageLoader } from "@/components/shared/LoadingSpinner";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { AdminOnly } from "@/components/shared/PermissionGate";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const roleBadge: Record<string, { classes: string }> = {
   ADMIN: {
@@ -59,6 +61,7 @@ function getInitials(name: string): string {
 }
 
 export default function UsersPage() {
+  const { isAdmin } = usePermissions();
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
 
@@ -83,10 +86,12 @@ export default function UsersPage() {
             {users.length} users &middot; {activeCount} active
           </p>
         </div>
-        <button className="neu-button-primary flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          Invite User
-        </button>
+        <AdminOnly>
+          <button className="neu-button-primary flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Invite User
+          </button>
+        </AdminOnly>
       </div>
 
       {/* Search & Filter */}
@@ -151,7 +156,9 @@ export default function UsersPage() {
                   <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400">
                     Status
                   </th>
-                  <th className="text-right px-6 py-3 text-xs font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400"></th>
+                  {isAdmin && (
+                    <th className="text-right px-6 py-3 text-xs font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400"></th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-100 dark:divide-surface-800/50">
@@ -221,11 +228,13 @@ export default function UsersPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-3 text-right">
-                        <button className="p-1.5 rounded-lg hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors">
-                          <MoreVertical className="w-4 h-4 text-surface-400" />
-                        </button>
-                      </td>
+                      {isAdmin && (
+                        <td className="px-6 py-3 text-right">
+                          <button className="p-1.5 rounded-lg hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors">
+                            <MoreVertical className="w-4 h-4 text-surface-400" />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}

@@ -47,5 +47,15 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>UIStatusBarStyle</key>
+	<string>UIStatusBarStyleDefault</string>
+	<key>NSCameraUsageDescription</key>
+	<string>AcqTracker uses the camera to photograph facility conditions during inspections and transition day.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>AcqTracker accesses your photo library to attach facility photos to inspection tasks.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>AcqTracker saves facility inspection photos to your photo library.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

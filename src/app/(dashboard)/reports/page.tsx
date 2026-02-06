@@ -9,8 +9,13 @@ import {
   Users,
   Download,
   Filter,
+  Layers,
+  Activity,
 } from "lucide-react";
 import { ProgressBar } from "@/components/shared/ProgressBar";
+import { PipelineFunnel, PipelineFunnelSkeleton } from "@/components/charts/PipelineFunnel";
+import { TaskCompletionTrend, TaskCompletionTrendSkeleton } from "@/components/charts/TaskCompletionTrend";
+import { WorkstreamProgress, WorkstreamProgressSkeleton } from "@/components/charts/WorkstreamProgress";
 import { trpc } from "@/lib/trpc";
 import { PageLoader } from "@/components/shared/LoadingSpinner";
 
@@ -27,6 +32,19 @@ const statusColorMap: Record<string, string> = {
   ARCHIVED: "bg-surface-300",
 };
 
+const statusColorHex: Record<string, string> = {
+  PIPELINE: "#9ca3af",
+  LOI: "#3b82f6",
+  DUE_DILIGENCE: "#f59e0b",
+  CHOW_FILED: "#14b8a6",
+  CLOSING: "#10b981",
+  TRANSITION_DAY: "#06b6d4",
+  WEEK_1: "#14b8a6",
+  WEEK_2: "#0d9488",
+  POST_CLOSE: "#6366f1",
+  ARCHIVED: "#d1d5db",
+};
+
 const statusLabelMap: Record<string, string> = {
   PIPELINE: "Pipeline",
   LOI: "LOI",
@@ -40,11 +58,24 @@ const statusLabelMap: Record<string, string> = {
   ARCHIVED: "Archived",
 };
 
+function ChartCardSkeleton() {
+  return (
+    <div className="neu-card animate-pulse">
+      <div className="h-4 w-36 bg-surface-200 dark:bg-surface-700 rounded mb-4" />
+      <div className="h-[260px] bg-surface-100 dark:bg-surface-800 rounded-lg" />
+    </div>
+  );
+}
+
 export default function ReportsPage() {
   const { data: pipeline, isLoading: pipelineLoading } =
     trpc.reports.pipelineOverview.useQuery();
   const { data: teamData, isLoading: teamLoading } =
     trpc.reports.teamPerformance.useQuery({});
+  const { data: trendData, isLoading: trendLoading } =
+    trpc.reports.taskCompletionTrend.useQuery({ days: 30 });
+  const { data: workstreamData, isLoading: workstreamLoading } =
+    trpc.reports.workstreamBreakdown.useQuery();
 
   const isLoading = pipelineLoading || teamLoading;
 
@@ -70,9 +101,10 @@ export default function ReportsPage() {
   // Convert Record<string, number> to arrays for rendering
   const pipelineStats = Object.entries(pipeline?.byStatus ?? {}).map(
     ([status, count]) => ({
+      status,
       label: statusLabelMap[status] ?? status,
       count,
-      color: statusColorMap[status] ?? "bg-surface-400",
+      color: statusColorHex[status] ?? "#9ca3af",
     })
   );
 
@@ -85,6 +117,13 @@ export default function ReportsPage() {
   );
 
   const teamStats = teamData?.teamStats ?? [];
+
+  // Transform trend data for the TaskCompletionTrend chart
+  const trendChartData = (trendData ?? []).map((d) => ({
+    date: d.date,
+    completed: d.completed,
+    total: d.cumulative,
+  }));
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -167,36 +206,59 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Pipeline Distribution */}
-      {pipelineStats.length > 0 && (
+      {/* Pipeline Distribution Chart */}
+      {pipelineLoading ? (
+        <ChartCardSkeleton />
+      ) : (
         <div className="neu-card">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-surface-400 dark:text-surface-500 mb-4">
             Pipeline Distribution
           </h2>
-          <div className="flex gap-1 h-8 rounded-xl overflow-hidden mb-4">
-            {pipelineStats.map((s) => (
-              <div
-                key={s.label}
-                className={`${s.color} flex items-center justify-center`}
-                style={{
-                  flex: s.count,
-                }}
-                title={`${s.label}: ${s.count}`}
-              >
-                <span className="text-xs font-bold text-white">{s.count}</span>
-              </div>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-4">
-            {pipelineStats.map((s) => (
-              <div key={s.label} className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-sm ${s.color}`} />
-                <span className="text-xs text-surface-500 dark:text-surface-400">
-                  {s.label} ({s.count})
-                </span>
-              </div>
-            ))}
-          </div>
+          {pipelineStats.length > 0 ? (
+            <PipelineFunnel data={pipelineStats} />
+          ) : (
+            <p className="text-sm text-surface-400 py-8 text-center">
+              No pipeline data available yet.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Task Completion Trend */}
+      {trendLoading ? (
+        <ChartCardSkeleton />
+      ) : (
+        <div className="neu-card">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-surface-400 dark:text-surface-500 mb-4 flex items-center gap-2">
+            <Activity className="w-4 h-4" />
+            Task Completion Trend (30 Days)
+          </h2>
+          {trendChartData.length > 0 ? (
+            <TaskCompletionTrend data={trendChartData} />
+          ) : (
+            <p className="text-sm text-surface-400 py-8 text-center">
+              No task completion data available yet.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Workstream Breakdown */}
+      {workstreamLoading ? (
+        <ChartCardSkeleton />
+      ) : (
+        <div className="neu-card">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-surface-400 dark:text-surface-500 mb-4 flex items-center gap-2">
+            <Layers className="w-4 h-4" />
+            Workstream Breakdown
+          </h2>
+          {workstreamData && workstreamData.length > 0 ? (
+            <WorkstreamProgress data={workstreamData} />
+          ) : (
+            <p className="text-sm text-surface-400 py-8 text-center">
+              No workstream data available yet.
+            </p>
+          )}
         </div>
       )}
 

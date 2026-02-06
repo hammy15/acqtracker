@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/stores/uiStore";
+import { usePermissions } from "@/hooks/usePermissions";
+import type { Permission } from "@/lib/permissions";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import {
   LayoutDashboard,
@@ -13,24 +15,34 @@ import {
   Settings,
 } from "lucide-react";
 
-const mobileNavItems = [
+const mobileNavItems: {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  permission?: Permission;
+}[] = [
   { href: "/", label: "Home", icon: LayoutDashboard },
   { href: "/deals", label: "Deals", icon: Building2 },
   { href: "/transition-day", label: "TD", icon: Zap },
   { href: "/archive", label: "Archive", icon: Archive },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/settings", label: "Settings", icon: Settings, permission: "org:settings" },
 ];
 
 export function MobileNav() {
   const pathname = usePathname();
   const { mobileNavOpen, setMobileNavOpen } = useUIStore();
+  const { can } = usePermissions();
+
+  const filteredNavItems = mobileNavItems.filter(
+    (item) => !item.permission || can(item.permission)
+  );
 
   return (
     <>
       {/* Bottom tab bar */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 h-16 bg-surface-100/90 dark:bg-surface-950/90 backdrop-blur-lg border-t border-surface-200 dark:border-surface-800">
         <div className="h-full flex items-center justify-around px-2">
-          {mobileNavItems.map((item) => {
+          {filteredNavItems.map((item) => {
             const isActive =
               pathname === item.href ||
               (item.href !== "/" && pathname.startsWith(item.href));
@@ -68,7 +80,7 @@ export function MobileNav() {
             </div>
           </div>
           <nav className="py-4 px-3 space-y-1">
-            {mobileNavItems.map((item) => {
+            {filteredNavItems.map((item) => {
               const isActive =
                 pathname === item.href ||
                 (item.href !== "/" && pathname.startsWith(item.href));

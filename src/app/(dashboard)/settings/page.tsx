@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const LIST_TABS = [
   { key: "customWorkstreams", label: "Workstreams", description: "Task organization categories" },
@@ -42,6 +43,7 @@ interface CustomItem {
 }
 
 export default function OrgSettingsPage() {
+  const { can } = usePermissions();
   const { data: settings, isLoading } = trpc.orgSettings.get.useQuery();
   const utils = trpc.useUtils();
 
@@ -144,6 +146,22 @@ export default function OrgSettingsPage() {
       items: updated,
     });
   };
+
+  if (!can("org:settings")) {
+    return (
+      <div className="max-w-lg mx-auto mt-20">
+        <div className="neu-card text-center py-12">
+          <Shield className="w-12 h-12 text-surface-300 dark:text-surface-600 mx-auto mb-4" />
+          <h2 className="text-lg font-semibold text-surface-900 dark:text-surface-100 mb-2">
+            Access Denied
+          </h2>
+          <p className="text-sm text-surface-500 dark:text-surface-400">
+            You do not have permission to view organization settings. Contact an administrator if you need access.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

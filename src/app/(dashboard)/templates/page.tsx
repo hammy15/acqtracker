@@ -13,6 +13,7 @@ import {
 import { trpc } from "@/lib/trpc";
 import { PageLoader } from "@/components/shared/LoadingSpinner";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { PermissionGate } from "@/components/shared/PermissionGate";
 
 export default function TemplatesPage() {
   const [search, setSearch] = useState("");
@@ -34,10 +35,12 @@ export default function TemplatesPage() {
             {templates?.length ?? 0} checklist templates
           </p>
         </div>
-        <button className="neu-button-primary flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          New Template
-        </button>
+        <PermissionGate permission="templates:create">
+          <button className="neu-button-primary flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            New Template
+          </button>
+        </PermissionGate>
       </div>
 
       {/* Search */}

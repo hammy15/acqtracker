@@ -159,6 +159,84 @@ export const chatRouter = router({
       return message;
     }),
 
+  // ── Presence: get online users for a deal ──────────────────────────
+  getPresence: protectedProcedure
+    .input(z.object({ dealId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const { user } = ctx.session;
+      if (!hasPermission(user.role, "deals:read")) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      const canAccess = await canAccessDeal(user.id, user.role, input.dealId);
+      if (!canAccess) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      // Return users who have been seen within the last 60 seconds
+      const cutoff = new Date(Date.now() - 60_000);
+
+      const presenceRecords = await db.userPresence.findMany({
+        where: {
+          dealId: input.dealId,
+          lastSeenAt: { gte: cutoff },
+          status: { not: "OFFLINE" },
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+              avatar: true,
+            },
+          },
+        },
+        orderBy: { lastSeenAt: "desc" },
+      });
+
+      return presenceRecords;
+    }),
+
+  // ── Presence: update/upsert heartbeat ─────────────────────────────
+  updatePresence: protectedProcedure
+    .input(
+      z.object({
+        dealId: z.string(),
+        status: z.enum(["ACTIVE", "IDLE", "OFFLINE"]),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { user } = ctx.session;
+
+      const canAccess = await canAccessDeal(user.id, user.role, input.dealId);
+      if (!canAccess) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      const presence = await db.userPresence.upsert({
+        where: {
+          userId_dealId: {
+            userId: user.id,
+            dealId: input.dealId,
+          },
+        },
+        update: {
+          status: input.status as any,
+          lastSeenAt: new Date(),
+        },
+        create: {
+          userId: user.id,
+          dealId: input.dealId,
+          status: input.status as any,
+          lastSeenAt: new Date(),
+        },
+      });
+
+      return presence;
+    }),
+
   createChannel: protectedProcedure
     .input(
       z.object({

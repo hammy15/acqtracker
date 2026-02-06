@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/stores/uiStore";
 import { usePermissions } from "@/hooks/usePermissions";
+import type { Permission } from "@/lib/permissions";
 import {
   LayoutDashboard,
   Building2,
@@ -18,7 +19,13 @@ import {
   Zap,
 } from "lucide-react";
 
-const navItems = [
+const navItems: {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  permission: Permission | null;
+  adminOnly?: boolean;
+}[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, permission: null },
   { href: "/deals", label: "Deals", icon: Building2, permission: null },
   {
@@ -31,39 +38,40 @@ const navItems = [
     href: "/templates",
     label: "Templates",
     icon: FileStack,
-    permission: "templates:manage" as const,
+    permission: "templates:read",
   },
   {
     href: "/state-requirements",
     label: "State Reqs",
     icon: MapPin,
-    permission: "state_reqs:manage" as const,
+    permission: "state-reqs:read",
   },
   {
     href: "/users",
     label: "Users",
     icon: Users,
-    permission: "users:manage" as const,
+    permission: "users:read",
+    adminOnly: true,
   },
   {
     href: "/reports",
     label: "Reports",
     icon: BarChart3,
-    permission: "reports:view" as const,
+    permission: "reports:read",
   },
   { href: "/archive", label: "Archive", icon: Archive, permission: null },
   {
     href: "/settings",
     label: "Settings",
     icon: Settings,
-    permission: "org:settings" as const,
+    permission: "org:settings",
   },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const { sidebarCollapsed, toggleSidebarCollapsed } = useUIStore();
-  const { hasPermission } = usePermissions();
+  const { can, isAdmin } = usePermissions();
 
   return (
     <aside
@@ -90,10 +98,11 @@ export function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto scrollbar-hide">
         {navItems
-          .filter(
-            (item) =>
-              !item.permission || hasPermission(item.permission)
-          )
+          .filter((item) => {
+            if (item.adminOnly && !isAdmin) return false;
+            if (item.permission && !can(item.permission)) return false;
+            return true;
+          })
           .map((item) => {
             const isActive =
               pathname === item.href ||

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/hooks/usePermissions";
+import type { Permission } from "@/lib/permissions";
 import { useUIStore } from "@/stores/uiStore";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -38,7 +39,13 @@ import {
 // Nav item definitions — mirrors the old Sidebar
 // ---------------------------------------------------------------------------
 
-const navItems = [
+const navItems: {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  permission: Permission | null;
+  adminOnly?: boolean;
+}[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, permission: null },
   { href: "/deals", label: "Deals", icon: Building2, permission: null },
   { href: "/transition-day", label: "Transition Day", icon: Zap, permission: null },
@@ -46,32 +53,33 @@ const navItems = [
     href: "/templates",
     label: "Templates",
     icon: FileStack,
-    permission: "templates:manage" as const,
+    permission: "templates:read",
   },
   {
     href: "/state-requirements",
     label: "State Reqs",
     icon: MapPin,
-    permission: "state_reqs:manage" as const,
+    permission: "state-reqs:read",
   },
   {
     href: "/users",
     label: "Users",
     icon: Users,
-    permission: "users:manage" as const,
+    permission: "users:read",
+    adminOnly: true,
   },
   {
     href: "/reports",
     label: "Reports",
     icon: BarChart3,
-    permission: "reports:view" as const,
+    permission: "reports:read",
   },
   { href: "/archive", label: "Archive", icon: Archive, permission: null },
   {
     href: "/settings",
     label: "Settings",
     icon: Settings,
-    permission: "org:settings" as const,
+    permission: "org:settings",
   },
 ];
 
@@ -82,7 +90,7 @@ const navItems = [
 export function TopNavbar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const { hasPermission } = usePermissions();
+  const { can, isAdmin } = usePermissions();
   const { mobileNavOpen, setMobileNavOpen } = useUIStore();
   const [searchFocused, setSearchFocused] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -132,9 +140,11 @@ export function TopNavbar() {
     };
   }, [mobileNavOpen]);
 
-  const filteredNav = navItems.filter(
-    (item) => !item.permission || hasPermission(item.permission)
-  );
+  const filteredNav = navItems.filter((item) => {
+    if (item.adminOnly && !isAdmin) return false;
+    if (item.permission && !can(item.permission)) return false;
+    return true;
+  });
 
   const isActive = (href: string) =>
     pathname === href || (href !== "/" && pathname.startsWith(href));

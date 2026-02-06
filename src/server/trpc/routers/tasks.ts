@@ -3,6 +3,10 @@ import { router, protectedProcedure } from "../trpc";
 import { db } from "@/server/db";
 import { hasPermission, canAccessDeal } from "@/server/permissions";
 import { TRPCError } from "@trpc/server";
+import {
+  sendTaskAssignmentNotification,
+  sendTaskBlockedNotification,
+} from "@/server/email/send";
 
 const userSelect = {
   id: true,
@@ -161,6 +165,11 @@ export const tasksRouter = router({
         },
       });
 
+      // Fire-and-forget: notify assignee if task was assigned on creation
+      if (input.assignedToId) {
+        void sendTaskAssignmentNotification(task.id, input.assignedToId);
+      }
+
       return task;
     }),
 
@@ -229,6 +238,11 @@ export const tasksRouter = router({
         },
       });
 
+      // Fire-and-forget: notify deal lead when a task is blocked
+      if (input.status === "BLOCKED") {
+        void sendTaskBlockedNotification(input.id);
+      }
+
       return updated;
     }),
 
@@ -268,6 +282,11 @@ export const tasksRouter = router({
           newValue: { assignedToId: input.assignedToId },
         },
       });
+
+      // Fire-and-forget: notify newly assigned user
+      if (input.assignedToId) {
+        void sendTaskAssignmentNotification(input.id, input.assignedToId);
+      }
 
       return updated;
     }),

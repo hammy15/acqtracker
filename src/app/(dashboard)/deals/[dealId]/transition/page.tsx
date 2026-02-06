@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
+import { PermissionGate } from "@/components/shared/PermissionGate";
 
 const arrivalSchedule = [
   { time: "11:00 PM (night before)", tasks: "Team Lead arrives, meets night shift supervisor, walkthrough" },
@@ -62,10 +63,12 @@ export default function TransitionPage() {
             Plan team assignments and arrival schedule for closing night
           </p>
         </div>
-        <button className="neu-button-primary flex items-center gap-2">
-          <UserPlus className="w-4 h-4" />
-          Add Team Member
-        </button>
+        <PermissionGate permission="buildings:create">
+          <button className="neu-button-primary flex items-center gap-2">
+            <UserPlus className="w-4 h-4" />
+            Add Team Member
+          </button>
+        </PermissionGate>
       </div>
 
       {/* Summary */}
@@ -174,16 +177,18 @@ export default function TransitionPage() {
       </div>
 
       {/* Save as Template */}
-      <div className="neu-card space-y-4">
-        <div className="flex items-center gap-3 pb-3 border-b border-surface-200 dark:border-surface-800">
-          <FileStack className="w-5 h-5 text-primary-500" />
-          <div>
-            <h2 className="text-lg font-semibold text-surface-900 dark:text-surface-100">Save as Template</h2>
-            <p className="text-xs text-surface-500">Create a reusable template from this deal's task structure</p>
+      <PermissionGate permission="templates:create">
+        <div className="neu-card space-y-4">
+          <div className="flex items-center gap-3 pb-3 border-b border-surface-200 dark:border-surface-800">
+            <FileStack className="w-5 h-5 text-primary-500" />
+            <div>
+              <h2 className="text-lg font-semibold text-surface-900 dark:text-surface-100">Save as Template</h2>
+              <p className="text-xs text-surface-500">Create a reusable template from this deal's task structure</p>
+            </div>
           </div>
+          <SaveAsTemplateForm dealId={dealId} />
         </div>
-        <SaveAsTemplateForm dealId={dealId} />
-      </div>
+      </PermissionGate>
     </div>
   );
 }

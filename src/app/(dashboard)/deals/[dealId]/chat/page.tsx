@@ -13,6 +13,9 @@ import {
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
+import { broadcastEvent } from "@/lib/realtime";
+import { LiveIndicator } from "@/components/shared/LiveIndicator";
 
 const avatarColors = [
   "bg-primary-500",
@@ -102,12 +105,21 @@ export default function ChatPage() {
     }
   }, [channels, activeChannelId]);
 
-  // Fetch messages for active channel
-  const { data: messagesData, isLoading: messagesLoading } =
-    trpc.chat.getMessages.useQuery(
-      { channelId: activeChannelId!, cursor: undefined, limit: 50 },
-      { enabled: !!activeChannelId }
-    );
+  // Fetch messages for active channel with 5s polling for real-time chat
+  const messagesQuery = trpc.chat.getMessages.useQuery(
+    { channelId: activeChannelId!, cursor: undefined, limit: 50 },
+    { enabled: !!activeChannelId }
+  );
+
+  const { data: messagesData, isLoading: messagesLoading } = messagesQuery;
+
+  // Smart polling: 5s for active chat + cross-tab sync
+  useRealtimeQuery(messagesQuery, {
+    pollingInterval: 5_000,
+    enabled: !!activeChannelId,
+    eventFilter: (e) =>
+      e.type === "chat-message" && e.dealId === dealId,
+  });
 
   const messages = messagesData?.messages ?? [];
 
@@ -117,6 +129,12 @@ export default function ChatPage() {
       setMessage("");
       if (activeChannelId) {
         utils.chat.getMessages.invalidate({ channelId: activeChannelId });
+        // Broadcast to other tabs
+        broadcastEvent({
+          type: "chat-message",
+          dealId,
+          channelId: activeChannelId,
+        });
       }
     },
   });
@@ -193,6 +211,9 @@ export default function ChatPage() {
               {activeChannel.channelType}
             </span>
           )}
+          <div className="ml-auto">
+            <LiveIndicator isPolling={!!activeChannelId} compact />
+          </div>
         </div>
 
         {/* Messages */}

@@ -1,10 +1,40 @@
 "use client";
 
-import { Building2, CheckSquare, AlertTriangle, Calendar } from "lucide-react";
+import { Building2, CheckSquare, AlertTriangle, Calendar, BarChart3, Layers } from "lucide-react";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { ProgressBar } from "@/components/shared/ProgressBar";
+import { LiveIndicator } from "@/components/shared/LiveIndicator";
+import { PipelineFunnel, PipelineFunnelSkeleton } from "@/components/charts/PipelineFunnel";
+import { WorkstreamProgress, WorkstreamProgressSkeleton } from "@/components/charts/WorkstreamProgress";
 import { trpc } from "@/lib/trpc";
 import { useSession } from "next-auth/react";
+import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
+
+const STATUS_COLOR_HEX: Record<string, string> = {
+  PIPELINE: "#9ca3af",
+  LOI: "#3b82f6",
+  DUE_DILIGENCE: "#f59e0b",
+  CHOW_FILED: "#14b8a6",
+  CLOSING: "#10b981",
+  TRANSITION_DAY: "#06b6d4",
+  WEEK_1: "#14b8a6",
+  WEEK_2: "#0d9488",
+  POST_CLOSE: "#6366f1",
+  ARCHIVED: "#d1d5db",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  PIPELINE: "Pipeline",
+  LOI: "LOI",
+  DUE_DILIGENCE: "Due Diligence",
+  CHOW_FILED: "CHOW Filed",
+  CLOSING: "Closing",
+  TRANSITION_DAY: "Transition Day",
+  WEEK_1: "Week 1",
+  WEEK_2: "Week 2",
+  POST_CLOSE: "Post Close",
+  ARCHIVED: "Archived",
+};
 
 function StatCardSkeleton() {
   return (
@@ -61,6 +91,15 @@ function TaskRowSkeleton() {
   );
 }
 
+function ChartCardSkeleton() {
+  return (
+    <div className="neu-card animate-pulse">
+      <div className="h-4 w-36 bg-gray-200 rounded mb-4" />
+      <div className="h-[260px] bg-gray-100 rounded-lg" />
+    </div>
+  );
+}
+
 function getGreeting(): string {
   const hour = new Date().getHours();
   if (hour < 12) return "Good morning";
@@ -70,9 +109,30 @@ function getGreeting(): string {
 
 export default function DashboardPage() {
   const { data: session } = useSession();
-  const { data: dealsData, isLoading: dealsLoading } = trpc.deals.list.useQuery({ status: undefined });
-  const { data: tasksData, isLoading: tasksLoading } = trpc.tasks.getMyTasks.useQuery({});
-  const { data: statsData, isLoading: statsLoading } = trpc.deals.getStats.useQuery();
+  const dealsQuery = trpc.deals.list.useQuery({ status: undefined });
+  const { data: dealsData, isLoading: dealsLoading } = dealsQuery;
+
+  const tasksQuery = trpc.tasks.getMyTasks.useQuery({});
+  const { data: tasksData, isLoading: tasksLoading } = tasksQuery;
+
+  const statsQuery = trpc.deals.getStats.useQuery();
+  const { data: statsData, isLoading: statsLoading } = statsQuery;
+
+  const { data: pipelineData, isLoading: pipelineLoading } = trpc.reports.pipelineOverview.useQuery();
+  const { data: workstreamData, isLoading: workstreamLoading } = trpc.reports.workstreamBreakdown.useQuery();
+
+  // Smart polling for dashboard critical data (10s interval)
+  useRealtimeQuery(dealsQuery, {
+    pollingInterval: 10_000,
+    eventFilter: (e) => e.type === "deal-updated",
+  });
+  useRealtimeQuery(tasksQuery, {
+    pollingInterval: 10_000,
+    eventFilter: (e) => e.type === "task-updated" || e.type === "task-completed",
+  });
+  useRealtimeQuery(statsQuery, {
+    pollingInterval: 10_000,
+  });
 
   const deals = dealsData?.deals ?? [];
   const tasks = tasksData ?? [];
@@ -108,16 +168,29 @@ export default function DashboardPage() {
 
   const firstName = session?.user?.name?.split(" ")[0] ?? "there";
 
+  // Transform pipeline data for the PipelineFunnel chart
+  const pipelineChartData = pipelineData
+    ? Object.entries(pipelineData.byStatus).map(([status, count]) => ({
+        status,
+        label: STATUS_LABEL[status] ?? status,
+        count,
+        color: STATUS_COLOR_HEX[status] ?? "#9ca3af",
+      }))
+    : [];
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       {/* Greeting */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">
-          {getGreeting()}, {firstName}.
-        </h1>
-        <p className="text-gray-500 mt-1">
-          Here&apos;s your acquisition overview.
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {getGreeting()}, {firstName}.
+          </h1>
+          <p className="text-gray-500 mt-1">
+            Here&apos;s your acquisition overview.
+          </p>
+        </div>
+        <LiveIndicator isPolling={true} />
       </div>
 
       {/* Stat Cards */}
@@ -232,6 +305,52 @@ export default function DashboardPage() {
                   );
                 })}
           </div>
+        </div>
+      </section>
+
+      {/* Portfolio Analytics */}
+      <section>
+        <h2 className="section-header mb-4 flex items-center gap-2">
+          <BarChart3 className="w-5 h-5 text-primary-500" />
+          Portfolio Analytics
+        </h2>
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Pipeline Funnel */}
+          {pipelineLoading ? (
+            <ChartCardSkeleton />
+          ) : (
+            <div className="neu-card">
+              <h3 className="text-sm font-semibold uppercase tracking-widest text-surface-400 dark:text-surface-500 mb-4">
+                Deal Pipeline
+              </h3>
+              {pipelineChartData.length > 0 ? (
+                <PipelineFunnel data={pipelineChartData} />
+              ) : (
+                <p className="text-sm text-surface-400 py-8 text-center">
+                  No deals in pipeline yet.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Workstream Progress */}
+          {workstreamLoading ? (
+            <ChartCardSkeleton />
+          ) : (
+            <div className="neu-card">
+              <h3 className="text-sm font-semibold uppercase tracking-widest text-surface-400 dark:text-surface-500 mb-4 flex items-center gap-2">
+                <Layers className="w-4 h-4" />
+                Workstream Progress
+              </h3>
+              {workstreamData && workstreamData.length > 0 ? (
+                <WorkstreamProgress data={workstreamData} />
+              ) : (
+                <p className="text-sm text-surface-400 py-8 text-center">
+                  No workstream data available yet.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </section>
     </div>
