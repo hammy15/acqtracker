@@ -1,5 +1,6 @@
 import { TopNavbar } from "@/components/layout/TopNavbar";
 import { SplashScreen } from "@/components/layout/SplashScreen";
+import { AiChatBubble } from "@/components/ai/AiChatBubble";
 
 export default function DashboardLayout({
   children,
@@ -13,6 +14,7 @@ export default function DashboardLayout({
       <main className="mx-auto max-w-[1800px] px-4 py-6 lg:px-6">
         {children}
       </main>
+      <AiChatBubble />
     </div>
   );
 }

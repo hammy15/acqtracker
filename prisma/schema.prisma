@@ -97,6 +97,19 @@ enum ChannelType {
   CUSTOM
 }
 
+enum AiContextScope {
+  GLOBAL
+  DEAL
+}
+
+enum OtaDocumentStatus {
+  UPLOADING
+  EXTRACTING
+  ANALYZING
+  COMPLETE
+  ERROR
+}
+
 enum ActivityAction {
   DEAL_CREATED
   DEAL_STATUS_CHANGED
@@ -185,6 +198,8 @@ model User {
   buildingAssignments BuildingAssignment[]
   presence           UserPresence[]
   createdTemplates   Template[]          @relation("TemplateCreator")
+  aiConversations    AiConversation[]
+  otaUploads         OtaDocument[]       @relation("OtaUploader")
 
   @@index([orgId])
   @@index([email])
@@ -228,6 +243,8 @@ model Deal {
   buildingAssignments BuildingAssignment[]
   userPresence       UserPresence[]
   dueDiligenceDocs   DueDiligenceDoc[]
+  aiConversations    AiConversation[]
+  otaDocuments       OtaDocument[]
 
   @@index([orgId, status])
   @@index([dealLeadId])
@@ -499,4 +516,81 @@ model ActivityLog {
   @@index([dealId, timestamp])
   @@index([userId])
   @@index([entityType, entityId])
+}
+
+// ─────────────────────────────────────────────
+// AI ASSISTANT
+// ─────────────────────────────────────────────
+
+model AiConversation {
+  id        String         @id @default(cuid())
+  orgId     String
+  userId    String
+  title     String         @default("New conversation")
+  context   AiContextScope @default(GLOBAL)
+  dealId    String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  user     User         @relation(fields: [userId], references: [id])
+  deal     Deal?        @relation(fields: [dealId], references: [id])
+  messages AiMessage[]
+
+  @@index([userId, updatedAt])
+  @@index([dealId])
+}
+
+model AiMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           String   // "user" | "assistant"
+  content        String
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  conversation AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+// ─────────────────────────────────────────────
+// OTA DOCUMENTS & ANALYSIS
+// ─────────────────────────────────────────────
+
+model OtaDocument {
+  id            String            @id @default(cuid())
+  dealId        String
+  fileName      String
+  filePath      String
+  fileSize      Int
+  fileType      String
+  uploadedById  String
+  status        OtaDocumentStatus @default(UPLOADING)
+  extractedText String?
+  errorMessage  String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  deal       Deal         @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  uploadedBy User         @relation("OtaUploader", fields: [uploadedById], references: [id])
+  analysis   OtaAnalysis?
+
+  @@index([dealId])
+}
+
+model OtaAnalysis {
+  id                String   @id @default(cuid())
+  otaDocumentId     String   @unique
+  summary           String
+  sections          Json     // { staffing, financial, regulatory, operations, timeline, legal }
+  risks             Json     // [{ title, severity, description, recommendation }]
+  compliance        Json     // [{ regulation, concern, severity }]
+  agreedVsOpen      Json     // { agreed: [], notAgreed: [], ambiguous: [] }
+  operationalImpact Json     // [{ area, term, impact, actionRequired }]
+  model             String   @default("claude-sonnet-4-5-20250929")
+  tokensUsed        Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  otaDocument OtaDocument @relation(fields: [otaDocumentId], references: [id], onDelete: Cascade)
 }

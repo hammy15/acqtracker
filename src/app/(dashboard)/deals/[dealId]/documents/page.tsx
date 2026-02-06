@@ -11,6 +11,9 @@ import {
   Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/lib/trpc";
+import { OtaUploadSection } from "@/components/documents/OtaUploadSection";
+import { OtaAnalysisView } from "@/components/documents/OtaAnalysisView";
 
 type DocStatus = "received" | "pending" | "overdue" | "not_applicable" | "under_review";
 
@@ -78,6 +81,9 @@ const mockDocuments: DocRow[] = [
 
 export default function DocumentsPage() {
   const params = useParams();
+  const dealId = params.dealId as string;
+
+  const { data: otaDocs } = trpc.ota.getByDeal.useQuery({ dealId });
 
   const categories = Array.from(new Set(mockDocuments.map((d) => d.category)));
 
@@ -89,6 +95,26 @@ export default function DocumentsPage() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
+      {/* OTA Upload & Analysis */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <FileText className="w-5 h-5 text-teal-500" />
+            Operations Transfer Agreement
+          </h2>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Upload OTA documents for AI-powered analysis
+          </p>
+        </div>
+        <OtaUploadSection dealId={dealId} />
+        {/* Render analysis for each completed OTA doc */}
+        {otaDocs?.filter((d: any) => d.status === "COMPLETE" && d.analysis).map((doc: any) => (
+          <OtaAnalysisView key={doc.id} analysis={doc.analysis} documentId={doc.id} />
+        ))}
+      </div>
+
+      <hr className="border-gray-200" />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

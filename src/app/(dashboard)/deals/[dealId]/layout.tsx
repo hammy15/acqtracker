@@ -2,6 +2,7 @@
 
 import { useParams, usePathname } from "next/navigation";
 import Link from "next/link";
+import { useEffect } from "react";
 import {
   CheckSquare,
   FolderOpen,
@@ -18,6 +19,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { ProgressBar } from "@/components/shared/ProgressBar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useAiChatStore } from "@/stores/aiChatStore";
 
 const tabs = [
   { id: "checklist", label: "Checklist", icon: CheckSquare, href: "" },
@@ -67,10 +69,20 @@ export default function DealDetailLayout({
   const pathname = usePathname();
   const dealId = params.dealId as string;
 
+  const setDealContext = useAiChatStore((s) => s.setDealContext);
+
   const { data, isLoading } = trpc.deals.getById.useQuery(
     { id: dealId },
     { enabled: !!dealId }
   );
+
+  // Set AI chat deal context
+  useEffect(() => {
+    if (data) {
+      setDealContext({ id: data.id, name: data.facilityName });
+    }
+    return () => setDealContext(null);
+  }, [data, setDealContext]);
 
   const basePath = `/deals/${dealId}`;
 

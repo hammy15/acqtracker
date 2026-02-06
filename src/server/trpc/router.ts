@@ -11,6 +11,8 @@ import { archiveRouter } from "./routers/archive";
 import { activityRouter } from "./routers/activity";
 import { reportsRouter } from "./routers/reports";
 import { stateReqsRouter } from "./routers/stateReqs";
+import { otaRouter } from "./routers/ota";
+import { aiRouter } from "./routers/ai";
 
 export const appRouter = router({
   deals: dealsRouter,
@@ -25,6 +27,8 @@ export const appRouter = router({
   activity: activityRouter,
   reports: reportsRouter,
   stateReqs: stateReqsRouter,
+  ota: otaRouter,
+  ai: aiRouter,
 });
 
 export type AppRouter = typeof appRouter;

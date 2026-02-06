@@ -36,6 +36,10 @@ export type Permission =
   | "archive:restore"
   | "state-reqs:read"
   | "state-reqs:update"
+  | "ai:chat"
+  | "ota:upload"
+  | "ota:analyze"
+  | "ota:read"
   | "org:settings";
 
 export type Role =
@@ -83,6 +87,10 @@ const ALL_PERMISSIONS: Permission[] = [
   "archive:restore",
   "state-reqs:read",
   "state-reqs:update",
+  "ai:chat",
+  "ota:upload",
+  "ota:analyze",
+  "ota:read",
   "org:settings",
 ];
 
@@ -120,6 +128,10 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "archive:restore",
     "state-reqs:read",
     "state-reqs:update",
+    "ai:chat",
+    "ota:upload",
+    "ota:analyze",
+    "ota:read",
   ],
 
   DEAL_LEAD: [
@@ -143,6 +155,10 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "activity:read",
     "archive:read",
     "state-reqs:read",
+    "ai:chat",
+    "ota:upload",
+    "ota:analyze",
+    "ota:read",
   ],
 
   DEPARTMENT_LEAD: [
@@ -161,6 +177,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "reports:read",
     "activity:read",
     "state-reqs:read",
+    "ai:chat",
+    "ota:read",
   ],
 
   TEAM_MEMBER: [
@@ -176,6 +194,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "templates:read",
     "activity:read",
     "state-reqs:read",
+    "ai:chat",
+    "ota:read",
   ],
 
   VIEWER: [
@@ -190,6 +210,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "activity:read",
     "archive:read",
     "state-reqs:read",
+    "ota:read",
   ],
 };
 
