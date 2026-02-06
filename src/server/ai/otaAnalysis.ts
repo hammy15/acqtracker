@@ -265,8 +265,8 @@ export async function analyzeOta(
 ): Promise<OtaAnalysisResult> {
   try {
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-5-20250929",
-      max_tokens: 16384,
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 8192,
       system: SYSTEM_PROMPT,
       tools: [OTA_ANALYSIS_TOOL],
       tool_choice: { type: "tool", name: "submit_ota_analysis" },
