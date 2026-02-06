@@ -41,17 +41,23 @@ export function SplashScreen() {
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-500 ${
+      className={`fixed inset-0 z-50 flex items-center justify-center overflow-hidden transition-opacity duration-500 ${
         exiting ? "opacity-0" : "opacity-100"
       }`}
-      style={{ background: "#fafafa" }}
+      style={{
+        background: "#fafafa",
+        paddingLeft: "env(safe-area-inset-left, 0px)",
+        paddingRight: "env(safe-area-inset-right, 0px)",
+        paddingTop: "env(safe-area-inset-top, 0px)",
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+      }}
     >
       {/* Subtle decorative gradient orb behind content */}
       <div
         className="absolute pointer-events-none"
         style={{
-          width: 480,
-          height: 480,
+          width: "min(480px, 100vw)",
+          height: "min(480px, 100vw)",
           borderRadius: "50%",
           background:
             "radial-gradient(circle, rgba(20,184,166,0.08) 0%, rgba(20,184,166,0) 70%)",
@@ -61,7 +67,7 @@ export function SplashScreen() {
         }}
       />
 
-      <div className="relative flex flex-col items-center px-6 text-center">
+      <div className="relative flex w-full max-w-md flex-col items-center px-6 text-center">
         {/* Logo badge */}
         <div
           className={`flex items-center justify-center rounded-2xl transition-all duration-700 ease-out ${
