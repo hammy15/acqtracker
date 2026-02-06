@@ -17,7 +17,7 @@ function pick<T>(arr: T[]): T {
 }
 
 async function main() {
-  console.log("Seeding AcqTracker database…\n");
+  console.log("Seeding Acquisition Checklist database…\n");
 
   // ─────────────────────────────────────────────
   // CLEANUP (idempotent)

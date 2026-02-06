@@ -2,11 +2,11 @@
   "appName": "Acquisition Checklist",
   "subtitle": "Healthcare Facility Acquisitions",
   "shortDescription": "Track and manage healthcare facility acquisitions with AI-powered deal management.",
-  "fullDescription": "Acquisition Checklist is the comprehensive platform for healthcare facility acquisition teams. Track deals from pipeline through post-close, manage transition day checklists, analyze OTA agreements with AI, and coordinate your team in real-time.\n\nKey Features:\n• Deal Pipeline Management - Track SNF, ALF, ILF, Hospice, and In-Home acquisitions\n• Smart Checklists - Templates for pre-close, transition day, and post-close phases\n• AI Assistant - Get instant answers about deal status, blocked tasks, and team progress\n• OTA Analysis - Upload and analyze Operations Transfer Agreements with AI\n• Team Coordination - Assign team members, track presence, and communicate in real-time\n• State Requirements - Built-in regulatory checklists by state\n• Reports & Analytics - Pipeline funnel, workstream progress, and team performance\n• Offline Support - Access critical checklists even without connectivity\n\nBuilt for acquisition teams managing SNF, ALF, ILF, Hospice, and In-Home facility transitions.",
+  "fullDescription": "Acquisition Checklist is the comprehensive platform for healthcare facility acquisition teams. Track deals from pipeline through post-close, manage transition day checklists, analyze OTA agreements with AI, and coordinate your team in real-time.\n\nKey Features:\n• Deal Pipeline Management - Track SNF, ALF, ILF, Hospice, and In-Home acquisitions\n• Smart Checklists - Templates for pre-close, transition day, and post-close phases\n• AI Assistant - Get instant answers about deal status, blocked tasks, and team progress\n• OTA Analysis - Upload and analyze Operations Transfer Agreements with AI\n• Team Coordination - Assign team members, track presence, and communicate in real-time\n• Reports & Analytics - Pipeline funnel, workstream progress, and team performance\n• Offline Support - Access critical checklists even without connectivity\n\nBuilt for acquisition teams managing SNF, ALF, ILF, Hospice, and In-Home facility transitions.",
   "keywords": "healthcare,acquisition,SNF,nursing facility,checklist,transition,CHOW,due diligence",
   "category": "Business",
   "contentRating": "4+",
-  "privacyPolicyUrl": "https://acqtracker.vercel.app/privacy",
-  "supportUrl": "https://acqtracker.vercel.app/support",
-  "marketingUrl": "https://acqtracker.vercel.app"
+  "privacyPolicyUrl": "https://acquisitionchecklist.com/privacy",
+  "supportUrl": "https://acquisitionchecklist.com/support",
+  "marketingUrl": "https://acquisitionchecklist.com"
 }

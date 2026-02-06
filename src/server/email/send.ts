@@ -8,7 +8,7 @@ import {
 } from "./templates";
 import { db } from "@/server/db";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://acqtracker.com";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://acquisitionchecklist.com";
 
 function getResend() {
   if (!resend) {

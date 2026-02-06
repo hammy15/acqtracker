@@ -50,7 +50,7 @@ export default function RegisterPage() {
             Create Organization
           </h1>
           <p className="text-sm text-surface-500 dark:text-surface-400 mt-1">
-            Set up your acquisition tracker
+            Set up your Acquisition Checklist
           </p>
         </div>
 

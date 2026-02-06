@@ -8,10 +8,10 @@ const config: CapacitorConfig = {
   webDir: "cap-www",
 
   server: {
-    url: isDev ? undefined : "https://acqtracker.vercel.app",
+    url: isDev ? undefined : "https://acquisitionchecklist.com",
     cleartext: isDev,
     androidScheme: "https",
-    allowNavigation: ["acqtracker.vercel.app", "*.vercel.app"],
+    allowNavigation: ["acquisitionchecklist.com", "*.acquisitionchecklist.com", "*.vercel.app"],
   },
 
   plugins: {

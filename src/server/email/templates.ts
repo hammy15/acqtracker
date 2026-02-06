@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────
-// Email Templates for AcqTracker
+// Email Templates for Acquisition Checklist
 // All templates return raw HTML strings with inline styles.
 // Primary brand color: teal #14b8a6
 // ─────────────────────────────────────────────
@@ -35,7 +35,7 @@ function layout(content: string): string {
         <tr>
           <td style="padding:20px 32px;border-top:1px solid ${BORDER_COLOR};background-color:${BG_LIGHT};">
             <p style="margin:0;font-size:12px;color:${TEXT_SECONDARY};text-align:center;">
-              AcqTracker &mdash; Healthcare Acquisition Management
+              Acquisition Checklist &mdash; Healthcare Acquisition Management
             </p>
           </td>
         </tr>

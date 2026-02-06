@@ -1,4 +1,4 @@
-// AcqTracker - Healthcare Facility Acquisition Tracker
+// Acquisition Checklist - Healthcare Facility Acquisition Management
 // Prisma Schema
 
 generator client {
