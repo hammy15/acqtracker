@@ -53,6 +53,16 @@ export const authConfig: NextAuthConfig = {
           return null;
         }
 
+        if (!user.isActive) {
+          throw new Error("PENDING_APPROVAL");
+        }
+
+        // Update last login
+        await db.user.update({
+          where: { id: user.id },
+          data: { lastLoginAt: new Date() },
+        }).catch(() => {}); // non-blocking
+
         return {
           id: user.id,
           email: user.email,

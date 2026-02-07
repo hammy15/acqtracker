@@ -147,7 +147,7 @@ async function main() {
   const owen = await prisma.user.create({
     data: {
       orgId: org.id,
-      email: "owen",
+      email: "Ohammond@cascadiahc.com",
       passwordHash: godPassword,
       name: "Owen",
       role: "SUPER_ADMIN",

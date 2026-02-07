@@ -12,11 +12,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [isPending, setIsPending] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setIsPending(false);
     setLoading(true);
 
     const result = await signIn("credentials", {
@@ -28,7 +30,11 @@ export default function LoginPage() {
     setLoading(false);
 
     if (result?.error) {
-      setError("Invalid username or password");
+      if (result.error.includes("PENDING_APPROVAL")) {
+        setIsPending(true);
+      } else {
+        setError("Invalid email or password");
+      }
     } else {
       router.push("/");
       router.refresh();
@@ -63,17 +69,26 @@ export default function LoginPage() {
             </div>
           )}
 
+          {isPending && (
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm">
+              <p className="font-medium">Account pending approval</p>
+              <p className="text-xs mt-1">
+                Your access request is being reviewed by an administrator. You&apos;ll be able to sign in once approved.
+              </p>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Username
+              Email
             </label>
             <input
               type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="neu-input"
-              placeholder="Enter your username"
-              autoComplete="username"
+              placeholder="you@company.com"
+              autoComplete="email"
               required
             />
           </div>
@@ -120,7 +135,7 @@ export default function LoginPage() {
             href="/register"
             className="text-teal-600 hover:text-teal-700 font-medium"
           >
-            Contact your admin
+            Request access
           </Link>
         </p>
       </div>

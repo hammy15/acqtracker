@@ -238,6 +238,116 @@ export const usersRouter = router({
       return { success: true };
     }),
 
+  /** Get pending access requests (inactive users who never logged in) */
+  getPendingRequests: protectedProcedure.query(async ({ ctx }) => {
+    const { user } = ctx.session;
+    if (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN") {
+      throw new TRPCError({ code: "FORBIDDEN" });
+    }
+
+    return db.user.findMany({
+      where: {
+        orgId: user.orgId,
+        isActive: false,
+        lastLoginAt: null,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }),
+
+  /** Approve a pending access request */
+  approveRequest: protectedProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+        role: z.enum([
+          "SUPER_ADMIN",
+          "ADMIN",
+          "REGIONAL_LEAD",
+          "DEAL_LEAD",
+          "DEPARTMENT_LEAD",
+          "TEAM_MEMBER",
+          "VIEWER",
+        ]),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { user } = ctx.session;
+      if (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      // Only SUPER_ADMIN can grant ADMIN or SUPER_ADMIN roles
+      if (
+        (input.role === "SUPER_ADMIN" || input.role === "ADMIN") &&
+        user.role !== "SUPER_ADMIN"
+      ) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only Super Admins can grant admin roles.",
+        });
+      }
+
+      const target = await db.user.findUnique({
+        where: { id: input.userId },
+        select: { orgId: true, isActive: true },
+      });
+
+      if (!target) throw new TRPCError({ code: "NOT_FOUND" });
+      if (target.orgId !== user.orgId) throw new TRPCError({ code: "FORBIDDEN" });
+
+      return db.user.update({
+        where: { id: input.userId },
+        data: {
+          isActive: true,
+          role: input.role as any,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          isActive: true,
+        },
+      });
+    }),
+
+  /** Reject (delete) a pending access request */
+  rejectRequest: protectedProcedure
+    .input(z.object({ userId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const { user } = ctx.session;
+      if (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      const target = await db.user.findUnique({
+        where: { id: input.userId },
+        select: { orgId: true, isActive: true, lastLoginAt: true },
+      });
+
+      if (!target) throw new TRPCError({ code: "NOT_FOUND" });
+      if (target.orgId !== user.orgId) throw new TRPCError({ code: "FORBIDDEN" });
+
+      // Only allow deleting pending users (never logged in)
+      if (target.isActive || target.lastLoginAt) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Can only reject pending access requests.",
+        });
+      }
+
+      await db.user.delete({ where: { id: input.userId } });
+      return { success: true };
+    }),
+
   getTeamForDeal: protectedProcedure
     .input(z.object({ dealId: z.string() }))
     .query(async ({ ctx, input }) => {
