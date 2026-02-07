@@ -32,7 +32,9 @@ import {
   LogOut,
   User,
   ChevronDown,
+  Sparkles,
 } from "lucide-react";
+import { useAiChatStore } from "@/stores/aiChatStore";
 
 // ---------------------------------------------------------------------------
 // Nav item definitions — mirrors the old Sidebar
@@ -86,6 +88,7 @@ export function TopNavbar() {
   const { can, isAdmin, role } = usePermissions();
   const isGodMode = role === "SUPER_ADMIN";
   const { mobileNavOpen, setMobileNavOpen } = useUIStore();
+  const { toggle: toggleAiChat, isOpen: aiChatOpen } = useAiChatStore();
   const [searchFocused, setSearchFocused] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -252,6 +255,25 @@ export function TopNavbar() {
             {/* Divider */}
             <div className="mx-1.5 hidden h-5 w-px bg-gray-200 sm:block" />
 
+            {/* AI Assistant button */}
+            <button
+              onClick={toggleAiChat}
+              className={cn(
+                "hidden lg:flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-medium transition-all duration-200",
+                aiChatOpen
+                  ? "bg-teal-50 text-teal-700"
+                  : "text-gray-500 hover:text-teal-700 hover:bg-teal-50/60"
+              )}
+              aria-label="AI Assistant"
+            >
+              <Sparkles className={cn("h-3.5 w-3.5", aiChatOpen ? "text-teal-500" : "text-teal-400")} />
+              <span>Ask AI</span>
+              <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            </button>
+
+            {/* Divider */}
+            <div className="mx-1.5 hidden h-5 w-px bg-gray-200 lg:block" />
+
             {/* Notifications */}
             <button
               className="relative flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
@@ -412,6 +434,23 @@ export function TopNavbar() {
               );
             })}
           </nav>
+
+          {/* AI Assistant — mobile */}
+          <div className="border-t border-gray-100 px-3 py-2">
+            <button
+              onClick={() => { setMobileNavOpen(false); toggleAiChat(); }}
+              className="flex w-full items-center gap-3 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 px-4 py-3 text-white transition-all hover:opacity-90 active:scale-[0.98]"
+            >
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20">
+                <Sparkles className="h-4 w-4" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-semibold">AI Assistant</p>
+                <p className="text-[11px] text-teal-100">Ask anything about your deals</p>
+              </div>
+              <span className="flex h-2 w-2 rounded-full bg-white/80 animate-pulse" />
+            </button>
+          </div>
 
           {/* Mobile search bar */}
           <div className="border-t border-gray-100 px-3 py-2.5">

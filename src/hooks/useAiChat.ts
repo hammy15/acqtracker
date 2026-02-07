@@ -39,6 +39,9 @@ export function useAiChat() {
       setStreaming(true);
 
       try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 55000);
+
         const res = await fetch("/api/ai/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -47,12 +50,33 @@ export function useAiChat() {
             conversationId,
             dealId: dealContext?.id,
           }),
+          signal: controller.signal,
         });
 
-        if (!res.ok) throw new Error("Failed to send message");
+        clearTimeout(timeout);
+
+        if (!res.ok) {
+          let errorDetail = "";
+          try {
+            const errBody = await res.json();
+            errorDetail = errBody.error || "";
+          } catch {
+            // ignore parse failure
+          }
+
+          if (res.status === 401) {
+            throw new Error("Your session has expired. Please refresh the page and sign in again.");
+          } else if (res.status === 429) {
+            throw new Error("Too many requests. Please wait a moment and try again.");
+          } else if (res.status >= 500) {
+            throw new Error(errorDetail || "The AI service is temporarily unavailable. Please try again in a few seconds.");
+          } else {
+            throw new Error(errorDetail || `Request failed (${res.status}). Please try again.`);
+          }
+        }
 
         const reader = res.body?.getReader();
-        if (!reader) throw new Error("No reader");
+        if (!reader) throw new Error("Could not read response stream. Please try again.");
 
         const decoder = new TextDecoder();
         let fullContent = "";
@@ -76,20 +100,35 @@ export function useAiChat() {
               if (parsed.type === "text") {
                 fullContent += parsed.content;
                 updateLastAssistantMessage(fullContent);
+              } else if (parsed.type === "error") {
+                throw new Error(parsed.content || "The AI encountered an error processing your request.");
               } else if (parsed.type === "done") {
                 if (parsed.conversationId) {
                   setConversationId(parsed.conversationId);
                 }
               }
-            } catch {
+            } catch (e) {
+              // Re-throw actual errors (from error events above)
+              if (e instanceof Error && e.message !== "Unexpected token") {
+                throw e;
+              }
               // Skip malformed JSON
             }
           }
         }
-      } catch {
-        updateLastAssistantMessage(
-          "Sorry, something went wrong. Please try again.",
-        );
+
+        // If we got through the stream but have no content, something went wrong
+        if (!fullContent) {
+          throw new Error("No response received from AI. Please try again.");
+        }
+      } catch (err) {
+        const message =
+          err instanceof DOMException && err.name === "AbortError"
+            ? "Request timed out. The AI is taking too long — please try a simpler question."
+            : err instanceof Error
+              ? err.message
+              : "Something went wrong. Please try again.";
+        updateLastAssistantMessage(message);
       } finally {
         setStreaming(false);
       }
