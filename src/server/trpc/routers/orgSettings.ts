@@ -145,4 +145,103 @@ export const orgSettingsRouter = router({
         },
       });
     }),
+
+  // ── Admin Data Management ─────────────────────────────────────────
+
+  /** Get data counts for admin panel */
+  getDataCounts: protectedProcedure.query(async ({ ctx }) => {
+    const { user } = ctx.session;
+    if (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN") {
+      throw new TRPCError({ code: "FORBIDDEN" });
+    }
+
+    const [deals, tasks, templates, users, files, otaDocs, aiConversations, activityLogs] =
+      await Promise.all([
+        db.deal.count({ where: { orgId: user.orgId } }),
+        db.task.count({ where: { deal: { orgId: user.orgId } } }),
+        db.template.count({ where: { orgId: user.orgId } }),
+        db.user.count({ where: { orgId: user.orgId } }),
+        db.taskFile.count({ where: { task: { deal: { orgId: user.orgId } } } }),
+        db.otaDocument.count({ where: { deal: { orgId: user.orgId } } }),
+        db.aiConversation.count({ where: { orgId: user.orgId } }),
+        db.activityLog.count({ where: { deal: { orgId: user.orgId } } }),
+      ]);
+
+    return { deals, tasks, templates, users, files, otaDocs, aiConversations, activityLogs };
+  }),
+
+  /** List all deals for admin management */
+  listDealsForAdmin: protectedProcedure.query(async ({ ctx }) => {
+    const { user } = ctx.session;
+    if (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN") {
+      throw new TRPCError({ code: "FORBIDDEN" });
+    }
+
+    return db.deal.findMany({
+      where: { orgId: user.orgId },
+      select: {
+        id: true,
+        name: true,
+        facilityName: true,
+        status: true,
+        facilityType: true,
+        createdAt: true,
+        _count: { select: { tasks: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }),
+
+  /** Delete a specific deal and all related data */
+  deleteDeal: protectedProcedure
+    .input(z.object({ dealId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const { user } = ctx.session;
+      if (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      // Verify deal belongs to org
+      const deal = await db.deal.findFirst({
+        where: { id: input.dealId, orgId: user.orgId },
+      });
+      if (!deal) throw new TRPCError({ code: "NOT_FOUND" });
+
+      await db.deal.delete({ where: { id: input.dealId } });
+      return { success: true, name: deal.name };
+    }),
+
+  /** Purge all content (deals, tasks, templates, AI, activity) but keep users and org */
+  purgeAllContent: protectedProcedure
+    .input(z.object({ confirm: z.literal("DELETE_ALL_CONTENT") }))
+    .mutation(async ({ ctx, input }) => {
+      const { user } = ctx.session;
+      if (user.role !== "SUPER_ADMIN") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only Super Admins can purge all content.",
+        });
+      }
+
+      // Delete in dependency order
+      await db.aiMessage.deleteMany({ where: { conversation: { orgId: user.orgId } } });
+      await db.aiConversation.deleteMany({ where: { orgId: user.orgId } });
+      await db.activityLog.deleteMany({ where: { deal: { orgId: user.orgId } } });
+      await db.userPresence.deleteMany({ where: { deal: { orgId: user.orgId } } });
+      await db.buildingAssignment.deleteMany({ where: { deal: { orgId: user.orgId } } });
+      await db.feedPost.deleteMany({ where: { deal: { orgId: user.orgId } } });
+      await db.chatMessage.deleteMany({ where: { channel: { deal: { orgId: user.orgId } } } });
+      await db.chatChannel.deleteMany({ where: { deal: { orgId: user.orgId } } });
+      await db.otaAnalysis.deleteMany({ where: { otaDocument: { deal: { orgId: user.orgId } } } });
+      await db.otaDocument.deleteMany({ where: { deal: { orgId: user.orgId } } });
+      await db.dueDiligenceDoc.deleteMany({ where: { deal: { orgId: user.orgId } } });
+      await db.taskComment.deleteMany({ where: { task: { deal: { orgId: user.orgId } } } });
+      await db.taskFile.deleteMany({ where: { task: { deal: { orgId: user.orgId } } } });
+      await db.task.deleteMany({ where: { deal: { orgId: user.orgId } } });
+      await db.deal.deleteMany({ where: { orgId: user.orgId } });
+      await db.templateTask.deleteMany({ where: { template: { orgId: user.orgId } } });
+      await db.template.deleteMany({ where: { orgId: user.orgId } });
+
+      return { success: true };
+    }),
 });
