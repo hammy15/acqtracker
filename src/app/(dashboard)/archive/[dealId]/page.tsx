@@ -10,14 +10,13 @@ import {
   Users,
   CheckCircle2,
   FileText,
-  MapPin,
   RotateCcw,
   Download,
 } from "lucide-react";
 import { ProgressBar } from "@/components/shared/ProgressBar";
 
 export default function ArchivedDealPage() {
-  const params = useParams();
+  useParams();
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">

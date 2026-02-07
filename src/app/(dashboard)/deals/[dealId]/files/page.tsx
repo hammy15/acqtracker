@@ -17,7 +17,6 @@ import {
   FileArchive,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
 function getFileIcon(fileType: string, isPhoto: boolean) {
@@ -117,7 +116,7 @@ export default function FilesPage() {
 
   const toggleGroup = (name: string) => {
     const next = new Set(collapsedGroups);
-    next.has(name) ? next.delete(name) : next.add(name);
+    if (next.has(name)) { next.delete(name); } else { next.add(name); }
     setCollapsedGroups(next);
   };
 

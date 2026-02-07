@@ -7,7 +7,6 @@ import {
   Search,
   Calendar,
   Building2,
-  CheckCircle2,
   MapPin,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";

@@ -9,7 +9,6 @@ import {
   MessageCircle,
   UserPlus,
   AlertTriangle,
-  FileText,
   Settings,
   Eye,
   Plus,

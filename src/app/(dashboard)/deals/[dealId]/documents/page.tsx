@@ -108,8 +108,8 @@ export default function DocumentsPage() {
         </div>
         <OtaUploadSection dealId={dealId} />
         {/* Render analysis for each completed OTA doc */}
-        {otaDocs?.filter((d: any) => d.status === "COMPLETE" && d.analysis).map((doc: any) => (
-          <OtaAnalysisView key={doc.id} analysis={doc.analysis} documentId={doc.id} />
+        {otaDocs?.filter((d: { status: string; analysis?: unknown; id: string }) => d.status === "COMPLETE" && d.analysis).map((doc: { status: string; analysis: unknown; id: string }) => (
+          <OtaAnalysisView key={doc.id} analysis={doc.analysis as React.ComponentProps<typeof OtaAnalysisView>["analysis"]} documentId={doc.id} />
         ))}
       </div>
 

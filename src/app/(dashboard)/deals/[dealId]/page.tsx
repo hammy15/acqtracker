@@ -11,7 +11,7 @@ import {
   Check,
   AlertTriangle,
   Clock,
-  X,
+  // X,
   Flag,
   ListChecks,
   Circle,
@@ -251,7 +251,7 @@ export default function ChecklistPage() {
   const [phase, setPhase] = useState("");
   const [workstream, setWorkstream] = useState("");
   const [status, setStatus] = useState("");
-  const [assignedToId, setAssignedToId] = useState("");
+  const [assignedToId] = useState("");
   const [collapsedWorkstreams, setCollapsedWorkstreams] = useState<Set<string>>(new Set());
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
@@ -302,13 +302,13 @@ export default function ChecklistPage() {
 
   const toggleWorkstream = (name: string) => {
     const next = new Set(collapsedWorkstreams);
-    next.has(name) ? next.delete(name) : next.add(name);
+    if (next.has(name)) { next.delete(name); } else { next.add(name); }
     setCollapsedWorkstreams(next);
   };
 
   const toggleSection = (key: string) => {
     const next = new Set(collapsedSections);
-    next.has(key) ? next.delete(key) : next.add(key);
+    if (next.has(key)) { next.delete(key); } else { next.add(key); }
     setCollapsedSections(next);
   };
 

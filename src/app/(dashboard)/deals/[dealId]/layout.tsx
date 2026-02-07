@@ -2,7 +2,7 @@
 
 import { useParams, usePathname } from "next/navigation";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import {
   CheckSquare,
   FolderOpen,
@@ -76,6 +76,15 @@ export default function DealDetailLayout({
     { enabled: !!dealId }
   );
 
+  const daysUntilClose = useMemo(() => {
+    if (!data?.targetCloseDate) return null;
+    const diff = Math.ceil(
+      (new Date(data.targetCloseDate).getTime() - Date.now()) /
+        (1000 * 60 * 60 * 24)
+    );
+    return diff > 0 ? diff : null;
+  }, [data?.targetCloseDate]);
+
   // Set AI chat deal context
   useEffect(() => {
     if (data) {
@@ -122,17 +131,11 @@ export default function DealDetailLayout({
                   <p className="text-sm text-gray-500">
                     Close: {new Date(data.targetCloseDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                   </p>
-                  {(() => {
-                    const diff = Math.ceil(
-                      (new Date(data.targetCloseDate).getTime() - Date.now()) /
-                        (1000 * 60 * 60 * 24)
-                    );
-                    return diff > 0 ? (
-                      <p className="text-sm font-medium text-teal-500">
-                        {diff} days
-                      </p>
-                    ) : null;
-                  })()}
+                  {daysUntilClose && (
+                    <p className="text-sm font-medium text-teal-500">
+                      {daysUntilClose} days
+                    </p>
+                  )}
                 </div>
               )}
               {data._taskStats && (

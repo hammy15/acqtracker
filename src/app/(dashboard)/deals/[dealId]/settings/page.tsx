@@ -74,14 +74,18 @@ export default function DealSettingsPage() {
   const [notifyOnChat, setNotifyOnChat] = useState(false);
   const [notifyOnBlocked, setNotifyOnBlocked] = useState(true);
 
+  const dealName_ = deal?.name ?? "";
+  const facilityName_ = deal?.facilityName ?? "";
+  const status_ = deal?.status ?? "";
+  const dealLeadId_ = deal?.dealLeadId ?? "";
   useEffect(() => {
     if (deal) {
-      setDealName(deal.name);
-      setFacilityName(deal.facilityName);
-      setStatus(deal.status);
-      setDealLeadId(deal.dealLeadId ?? "");
+      setDealName(dealName_);
+      setFacilityName(facilityName_);
+      setStatus(status_);
+      setDealLeadId(dealLeadId_);
     }
-  }, [deal]);
+  }, [deal, dealName_, facilityName_, status_, dealLeadId_]);
 
   const handleSave = () => {
     updateDeal.mutate({

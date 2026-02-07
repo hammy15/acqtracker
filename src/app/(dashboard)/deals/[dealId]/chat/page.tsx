@@ -98,12 +98,13 @@ export default function ChatPage() {
   const { data: channels, isLoading: channelsLoading } =
     trpc.chat.getChannels.useQuery({ dealId }, { enabled: !!dealId });
 
-  // Auto-select first channel
+  // Auto-select first channel when loaded
+  const firstChannelId = channels?.[0]?.id ?? null;
   useEffect(() => {
-    if (channels && channels.length > 0 && !activeChannelId) {
-      setActiveChannelId(channels[0].id);
+    if (firstChannelId && !activeChannelId) {
+      setActiveChannelId(firstChannelId);
     }
-  }, [channels, activeChannelId]);
+  }, [firstChannelId, activeChannelId]);
 
   // Fetch messages for active channel with 5s polling for real-time chat
   const messagesQuery = trpc.chat.getMessages.useQuery(
